@@ -1,32 +1,41 @@
 ---
-title: "Title Goes Here"
+title: "Evaluation of the NFDI4Objects survey for students and trainees"
 author:
-  - Myfirstname Mylastname:
-      email: fl@oneplace.edu
-      institute: [UofO]
+  - Sophie C. Schmidt:
+      email: sophie.schmidt@dainst.de
+      institute: [DAI]
       correspondence: true
-  - Yourfirstname Yourlastname:
-      email: fl@another.edu
-      institute: [UofA]
+  - Christin Keller:
+      email: christin.keller@dainst.de
+      institute: [DAI]
       correspondence: false
+  - Louise Rokohl:
+      email: rokohl@rgzm.de
+      institute: [RGZM]
+      correspondence: false
+  - Florian Thiery:
+      email: thiery@rgzm.de
+      institute: [RGZM]
+      correspondence: false
+  - Henrike Backhaus:
+      email: henrike.backhaus@hs-mainz.de
+      institute: [HSM]
+      correspondence: false 
 institute:
-  - UofO: University of One Place
-  - UofA: University of Another Place
+  - DAI: Deutsches Archäologisches Institut
+  - RGZM: Römisch-Germanisches Zentralmuseum Mainz
+  - HSM: Hochschule Mainz
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: 
     bookdown::word_document2:
       fig_caption: yes
       reference_docx: "../templates/template.docx" # Insert path for the DOCX file
-      pandoc_args:
-      - --lua-filter=../templates/scholarly-metadata.lua
-      - --lua-filter=../templates/author-info-blocks.lua
-      - --lua-filter=../templates/pagebreak.lua
 bibliography: references.bib
 csl: "../templates/journal-of-archaeological-science.csl" # Insert path for the bib-style
 abstract: |
   Text of abstract
 keywords: |
-  keyword 1; keyword 2; keyword 3
+  NFDI, survey, results, research data management
 highlights: |
   These are the highlights. 
 ---
@@ -56,41 +65,204 @@ knitr::opts_chunk$set(
 <!-- The actual document text starts here: -->
 
 # Introduction
+This paper gives a quick overview over the results of the NFDI4Objects survey, that was tailored to students and trainees.
 
-Here is a citation [@Marwick2017]
+We were especially interested in what kind of courses on research data management or related topics have been offered to students and trainees and how they gathered the skills they need for their work.
 
-# Background
+# data set
 
-# Methods
+```{r data}
 
-# Results
+d <- read.csv2("../data/raw_data/20201210_results-survey553894.csv", sep = ",")
 
-<!-- Here's some example analysis code: -->
+library(tidyr)
+library(dplyr)
+library(tidyverse)
 
-```{r get-data, eval = FALSE}
-# Note the path that we need to use to access our data files when rendering this document
-my_data <- read.csv(here::here('analysis/data/raw_data/my_csv_file.csv'))
+d <- d %>%
+  rename(Archaeologie = studienfach.SQ001.,
+        Anthropologie = studienfach.SQ002.,
+        Archaeozoologie =  studienfach.SQ003.,
+        Archaeobotanik =  studienfach.SQ004.,
+        Architektur.Bauforschung =  studienfach.SQ005.,
+        Digital.Humanities = studienfach.SQ006.,
+        Geschichtswissenschaften = studienfach.SQ007.,
+        Grabungstechnik = studienfach.SQ008.,
+        Klimaforschung = studienfach.SQ009.,
+        Konservierung = studienfach.SQ010.,
+        Kunstgeschichte =  studienfach.SQ011.,
+        Linguistik.Philologie = studienfach.SQ012.,
+        MINT = studienfach.SQ013.,
+        Museumswissenschaften = studienfach.SQ014.,
+        Musikwissenschaften = studienfach.SQ015.,
+        Geochemie = studienfach.SQ016.,
+        Geologie = studienfach.SQ017.,
+        Geographie = studienfach.SQ018.,
+        Restaurierung = studienfach.SQ019.)
+
 ```
 
-```{r demo-plot, fig.cap="A plot of random numbers"}
-plot(rnorm(10))
+
+how many respondents: in total `r nrow(d)` number of answers
+
+## demographics of respondents
+
+### age
+
+```{r age}
+library(ggplot2)
+
+sum_alter  <- summary(d$alter)
+
+ggplot(data = d)+
+  geom_histogram(aes(x = alter), binwidth = 1)+
+  xlab("age")+
+  geom_text(aes(x = 65, y = 20, label = paste("n =", nrow(d))))+
+  geom_text(aes(x = 65, y = 10, label = paste("NA's = ", sum_alter[7])))
+
+
+
 ```
 
-Figure \@ref(fig:demo-plot) shows how we can have a caption and cross-reference for a plot
+Most of the respondents are aged between `r sum_alter[2]` (first quartile) and `r sum_alter[5]` (third quartile) years old. The youngest person is `r sum_alter[1]` and the oldest `r sum_alter[6]`. Median age is `r sum_alter[3]` and mean age is `r sum_alter[4]`. We can therfore conclude that we were able to reach the group of 20-29 year olds which was our aim. 
 
-```{r demo-inline-code}
-x <- round(pi, 2)
+### type of training
+
+
+```{r training}
+
+ggplot(data = d, aes(x = artausbildung, fill = artausbildung))+
+  geom_bar()+
+  geom_text(stat='count', aes(label = after_stat(count)), hjust=-0.01)+
+  labs(x = "type of training")+
+  guides(fill = FALSE)+
+  coord_flip()
 ```
 
-Here is an example of inline code `r x` in the middle of a sentence. 
+### subject of studies
 
-# Discussion
+```{r, faecher}
 
-# Conclusion
 
-# Acknowledgements
+faecher <-  d %>%
+  pivot_longer(c(Archaeologie:Restaurierung),
+             names_to = "fach",
+             values_to = "ja") %>%
+  filter(ja == "Ja")
 
-<!-- The following line inserts a page break  -->
+tab_fach <- as.data.frame(table(faecher$fach))
+
+
+  # text mining "sonstige" für Fächer
+  
+library("tm")
+library("SnowballC")
+
+  # bwl und betriebswirtschaftslehre zusammenfügen, bibliotheks und informationswissenschaft, journalisitik und journalismus zusammenfügen
+d$studienfach.other.  <- gsub("bwl", "betriebswirtschaftslehre", d$studienfach.other.)
+d$studienfach.other.  <- gsub("bibliotheks", "bibliothekswissenschaften", d$studienfach.other.)
+d$studienfach.other.  <- gsub("journalistik", "journalismus", d$studienfach.other.)
+
+docs <- Corpus(VectorSource(d$studienfach.other.))
+
+#inspect(docs)
+
+# Remove punctuations
+#docs <- tm_map(docs, removePunctuation)
+
+# Eliminate extra white spaces
+docs <- tm_map(docs, stripWhitespace)
+
+# Text stemming
+# docs <- tm_map(docs, stemDocument)
+docs <- tm_map(docs, removeWords, stopwords("german"))
+
+# Document matrix is a table containing the frequency of the words. 
+# Column names are words and row names are documents. 
+# The function TermDocumentMatrix() from text mining package can be used as follow :
+dtm <- TermDocumentMatrix(docs)
+m <- as.matrix(dtm)
+v <- sort(rowSums(m),decreasing=TRUE)
+studienfach_sonst <- data.frame(word = names(v),freq=v)
+head(studienfach_sonst, 30)
+
+## to do! 
+# soziale arbeit wieder zusammenfügen,
+# informatik zu mint, archäoinformatik zu DH?
+# antike kulturen vorderasiens und ägyptens?
+
+# bauforschung?
+
+colnames(studienfach_sonst)  <- c("Var1", "Freq")
+
+studfach_alle  <- rbind(tab_fach, studienfach_sonst)
+
+studfach_alle <- studfach_alle[!studfach_alle$Var1 == "arbeit",]
+#studfach_alle$Var1[studfach_alle$Var1 == "soziale"] <- "soziale arbeit"
+studfach_alle <- studfach_alle[!studfach_alle$Var1 == "relations",]
+
+studfach_alle$Var1 <- recode(studfach_alle$Var1,
+                                      soziale = "Soziale Arbeit",
+                             public = "public relations")
+
+
+
+studfach_alle %>%
+  filter(Freq > 2) %>%
+  ggplot()+
+  geom_bar(aes(x = reorder(Var1, Freq), y = Freq), stat = "identity")+
+  labs(x = "subjects", 
+       y = "frequency (> 2)", 
+       name = "Main subject of respondent")+
+    coord_flip()
+
+```
+
+
+# which year of studies
+
+```{r ausbildung}
+
+ggplot(data = d)+
+  geom_histogram(aes(x = jahrausbildung, fill =  artausbildung, col = artausbildung), alpha = 0.3)
+
+```
+
+
+### gender
+
+```{r gender}
+
+gender <- as.data.frame(table(d$geschlecht))
+gender$Freq[gender$Var1 == "keine Angabe"] <- gender$Freq[gender$Var1 == "keine Angabe"] + gender$Freq[gender$Var1 == ""]
+gender <- gender[-(gender$Var1 == ""),]
+
+ggplot(data = gender, aes(x = reorder(Var1, -Freq), y = Freq))+
+  geom_bar(stat = "identity" )+
+    labs(x = "gender", 
+       y = "frequency", 
+       name = "Gender of respondent")+
+    geom_text(aes(label = Freq), hjust = 0.5)+
+theme_bw()
+```
+
+### institution
+
+```{r inst}
+
+inst  <- as.data.frame(table(d$institution))
+
+inst$Var1[inst$Var1 == ""] <- NA
+
+ggplot(data = inst, aes(x = reorder(Var1, -Freq), y = Freq))+
+  geom_bar(stat = "identity")+    
+  geom_text(aes(label = Freq), hjust = 0.5)+
+  coord_flip()
+
+
+```
+
+
 
 \newpage
 
