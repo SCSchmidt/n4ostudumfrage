@@ -73,7 +73,7 @@ We were especially interested in what kind of courses on research data managemen
 
 ```{r data}
 
-d <- read.csv2("../data/raw_data/20201210_results-survey553894.csv", sep = ",")
+d <- read.csv2("../data/raw_data/20201210_results-survey553894.csv", sep = ",", encoding = "UTF-8")
 
 library(tidyr)
 library(dplyr)
@@ -99,6 +99,21 @@ d <- d %>%
         Geologie = studienfach.SQ017.,
         Geographie = studienfach.SQ018.,
         Restaurierung = studienfach.SQ019.)
+
+
+d <- d %>%
+  rename(Interesse.1 = warumkurs1.SQ001.,
+         Pflichtveranstaltung.1 = warumkurs1.SQ002.,
+         hilfreich.1 = warumkurs1.SQ003.,
+         Arbeitsmarkt.1 = warumkurs1.SQ004.,
+         Interesse.2 = warumkurs2.SQ001.,
+         Pflichtveranstaltung.2 = warumkurs2.SQ002.,
+         hilfreich.2 = warumkurs2.SQ003.,
+         Arbeitsmarkt.2 = warumkurs2.SQ004.,
+         Interesse.3 = warumkurs3.SQ001.,
+         Pflichtveranstaltung.3 = warumkurs3.SQ002.,
+         hilfreich.3 = warumkurs3.SQ003.,
+         Arbeitsmarkt.3 = warumkurs3.SQ004.)
 
 ```
 
@@ -263,6 +278,270 @@ ggplot(data = inst, aes(x = reorder(Var1, -Freq), y = Freq))+
 ```
 
 
+
+## 1. Welche Kurse wurden bereits belegt?
+
+```{r fdmkursejanein}
+fdm_ja <- d %>%
+  subset(fdmkursejanein == "ja") %>%
+  nrow()
+
+fdm_nein <- d %>%
+  subset(fdmkursejanein == "nein") %>%
+  nrow()
+fdm_wn <- d %>%
+  subset(fdmkursejanein == "weiß ich nicht") %>%
+  nrow()
+```
+
+Students were asked to say, whether there are courses at their institution which touched on research data management. Of those that answered `r fdm_ja` answered yes, `r fdm_nein` said "no". Most (`r fdm_wn`) were not sure, suggesting there were no courses in their immediate environmenht or they were unsure, what research data management entailed. 
+
+```{r}
+kursja <- d %>%
+  filter(Kurswahrgenommenjane == "ja") %>%
+  nrow()
+
+kursnein <- d %>%
+  filter(Kurswahrgenommenjane == "nein") %>%
+  nrow()
+
+ggplot()+
+  geom_bar(data = d, aes(x = Kurswahrgenommenjane))
+```
+Next, students were asked, whether they had joined a course on data management. Here we can see that most (`r kursnein`) didn't, but `r kursja` did.
+
+Those who had visited some courses were asked to name the amount of courses they visited at their institution which touched on data management.
+
+```{r nkurse_fdm}
+sum_nkurse <- summary(d$nkurse)
+
+ggplot()+
+  geom_histogram(data = d, aes(x = nkurse))
+
+```
+Most of the respondents, who said they had already taken a course on data management, named between `r sum_nkurse[2]` (first quartile) and `r sum_nkurse[5]` (third quartile) courses. The median is `r sum_nkurse[3]` and mean is `r sum_nkurse[4]`. The maximal value of `r sum_nkurse[6]` is a clear outlier.
+
+## 2. ist das abhängig von dem Fach, welches studiert wird?
+
+Next we look at how these data change in response to the studied subject.
+
+```{r}
+
+kurs_fach <- as.data.frame(table(faecher$fach, faecher$Kurswahrgenommenjane))
+
+ggplot()+
+  geom_col(data = kurs_fach, aes(x = reorder(Var1, Freq), y = Freq, fill = Var2))+
+  coord_flip()
+```
+
+
+
+```{r}
+ggplot()+
+  geom_histogram(data = faecher, aes(x = nkurse, fill = fach))
+```
+
+Outlier: MINT-subjects. In most other subjects: A lot of ppl took one course, and then it gradually gets less and less.
+
+
+```{r no_courses_subject}
+library(kableExtra)
+table(faecher$fach, faecher$nkurse) %>%
+  kable()
+```
+
+
+## 3. Was für Kurse wurden bereits besucht?
+
+Respondents were asked to give the details of up to three courses they already took.
+
+```{r}
+
+#umofrmung der daten: kursbeschreibung gibt thema, kursfach, in welchem fach das angeboten wurde, bundsland,
+
+d_kurs1 <- d %>% 
+  pivot_longer(kursbeschreibung1.3D.:kursbeschreibung1.other., # fasse diese zusammen
+               names_to = "kurs1", # in dieser neuen spalte 
+               names_prefix = "kursbeschreibung1.", #lösch diesen prefix
+               values_to = "kurs1ja", # ja oder nein in diese spalte
+               values_drop_na = TRUE)%>% # lösch alle NA
+  filter(kurs1ja != "Nein" & kurs1ja != "N/A" & kurs1ja != "")%>% # filter auf die die "ja" haben
+  pivot_longer(Interesse.1:warumkurs1.other.,
+               names_to = "warum1",
+               values_to = "warum1ja",
+               values_drop_na = TRUE)%>%
+  filter(warum1ja == "Ja")
+
+ggplot(data = d_kurs1)+
+  geom_bar(aes(x = kurs1, fill = warum1))+
+  coord_flip()
+
+```
+
+```{r}
+# umformung daten kurs zwei
+
+d_kurs2 <- d %>% 
+  pivot_longer(kursbeschreibung2.3D.:kursbeschreibung2.other., # fasse diese zusammen
+               names_to = "kurs2", # in dieser neuen spalte 
+               names_prefix = "kursbeschreibung2.", #lösch diesen prefix
+               values_to = "kurs2ja", # ja oder nein in diese spalte
+               values_drop_na = TRUE)%>% # lösch alle NA
+  filter(kurs2ja != "Nein" & kurs2ja != "N/A" & kurs2ja != "")%>% # filter auf die die "ja" haben
+  pivot_longer(Interesse.2:warumkurs2.other.,
+               names_to = "warum2",
+               values_to = "warum2ja",
+               values_drop_na = TRUE)%>%
+  filter(warum2ja == "Ja")
+
+ggplot(data = d_kurs2)+
+  geom_bar(aes(x = kurs2, fill = warum2))+
+  coord_flip()
+
+```
+
+```{r}
+d_kurs3 <- d %>% 
+  pivot_longer(kursbeschreibung3.3D.:kursbeschreibung3.other., # fasse diese zusammen
+               names_to = "kurs3", # in dieser neuen spalte 
+               names_prefix = "kursbeschreibung3.", #lösch diesen prefix
+               values_to = "kurs3ja", # ja oder nein in diese spalte
+               values_drop_na = TRUE)%>% # lösch alle NA
+  filter(kurs3ja != "Nein" & kurs3ja != "N/A" & kurs3ja != "")%>% # filter auf die die "ja" haben
+  pivot_longer(Interesse.3:warumkurs3.other.,
+               names_to = "warum3",
+               values_to = "warum3ja",
+               values_drop_na = TRUE)%>%
+  filter(warum3ja == "Ja")
+
+ggplot(data = d_kurs3)+
+  geom_bar(aes(x = kurs3, fill = warum3))+
+  coord_flip()
+```
+
+```{r}
+# Zusammmenfassung kurs 1-3
+
+d_kurs1 <- d_kurs1 %>%
+  rename(kurs_institution = kurs1,
+         kursja = kurs1ja,
+         grund = warum1,
+         grundja = warum1ja,
+         fach = kursfach1,
+         fach.other = kursfach1.other.,
+         bundesland = bundesland1,
+         bundesland.other = bundesland1.other.,
+         kursjahr = kursjahr1,
+         kurspflicht = kurspflicht1,
+         kursquali1 = kursquali1.SQ001.,
+         kurs_umsetzen = kursquali1.SQ002.)
+
+d_kurs2 <- d_kurs2 %>%
+  rename(kurs_institution = kurs2,
+         kursja = kurs2ja,
+         grund = warum2,
+         grundja = warum2ja,
+         fach = fach2,
+         fach.other = fach2.other.,
+         bundesland = bundesland2,
+         bundesland.other = bundesland2.other.,
+         kursjahr = kursjahr2,
+         kurspflicht = kurspflicht2,
+         kursquali1 = kursquali2.SQ001.,
+         kurs_umsetzen = kursquali2.SQ002.)
+
+d_kurs3 <- d_kurs3 %>%
+  rename(kurs_institution = kurs3,
+         kursja = kurs3ja,
+         grund = warum3,
+         grundja = warum3ja,
+         fach = fach3,
+         fach.other = fach3.other.,
+         bundesland = bundesland3,
+         bundesland.other = bundesland3.other.,
+         kursjahr = kursjahr3,
+         kurspflicht = kurspflicht3,
+         kursquali1 = kursquali3.SQ001.,
+         kurs_umsetzen = kursquali3.SQ002.)
+
+common_cols <- intersect(colnames(d_kurs1), colnames(d_kurs2))
+common_cols2 <- intersect(colnames(d_kurs2), colnames(d_kurs3))
+
+common_cols <- intersect(common_cols, common_cols2)
+
+d_kurs_inst <- rbind(
+  subset(d_kurs1, select = common_cols), 
+  subset(d_kurs2, select = common_cols),
+  subset(d_kurs3, select = common_cols) )
+
+d_kurs_inst$grund <- gsub('.[0-9]+', '', d_kurs_inst$grund)
+
+```
+### all courses taken on institutions of repsondents
+
+#### looking at reason for attending
+
+```{r inst_kurse_grund}
+ggplot(data = d_kurs_inst)+
+  geom_bar(aes(x = kurs_institution, fill = grund))+
+  coord_flip()
+```
+
+
+#### looking at bundesland
+
+
+```{r inst_kurse_bund }
+ggplot(data = d_kurs_inst)+
+  geom_bar(aes(x = bundesland , fill = kurs_institution ))+
+  coord_flip()
+```
+
+Gibt es Unterschiede zwischen den Bundesländern?
+
+#### date of course taken
+
+```{r}
+
+kurs_inst_jahr <- as.data.frame(table(d_kurs_inst$kursjahr, d_kurs_inst$bundesland))
+
+kurs_inst_jahr %>%
+  filter(!is.na(Var2) & Var2 != "")%>%
+ggplot(aes(x = Var1, col = Var2, y = Freq))+
+  geom_point() +
+  geom_line(aes(group = Var2))+
+  theme_minimal()+
+  labs(x = "Jahr", y = "Anzahl", title = "Anzahl Kurse mit FDM-Bezug pro Jahr")
+
+ggsave("../figures/first_draft_jahr_kurs.png", dpi = 300, units = "cm", height = 10)
+
+## notiz: das nicht anzahl kurse sondern anzahl themen in kursen!! 
+```
+
+
+4. Suchen sich Leute Kurse aus anderen Fächern oder nur in dem eigenen?
+
+5. Wie viele Kurse werden im Schnitt besucht?
+
+6. Warum werde Kurse besucht?
+  6a abhängig von studiertem Fach?
+  6b abhängig von Thema des Kurses?
+  
+7. Umgang mit Daten?
+  7a Such- und Findeverhalten, 
+  7b Welche back-up Strategien werden benutzt
+
+8. Gehen Leute in Fortbildungen? 
+  8a zu welchen Themen?
+
+9. Bilden sich Leute selber fort?
+  9a zu welchen Themen?
+
+10. Warum werden Kurse nicht besucht?
+
+11. Hängen Besuch von Kursen und Fortbildungen, Richtlinien zu FDM sowie Wissen um NFDI und Metadaten von ITAffinität ab? 
+
+12. In welchem Bereich bestehen Wünsche zu Fortbildung?
 
 \newpage
 
