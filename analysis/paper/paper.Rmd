@@ -115,6 +115,21 @@ d <- d %>%
          hilfreich.3 = warumkurs3.SQ003.,
          Arbeitsmarkt.3 = warumkurs3.SQ004.)
 
+# remove "" as input and make NA out of it
+# dplyr solution fom here: https://stackoverflow.com/questions/24172111/change-the-blank-cells-to-na
+
+library(dplyr)
+
+empty_as_na <- function(x){
+    if("factor" %in% class(x)) x <- as.character(x) ## since ifelse wont work with factors
+    ifelse(as.character(x)!="", x, NA)
+}
+
+## transform all columns
+d <- d %>% 
+  mutate_each(funs(empty_as_na))
+
+
 ```
 
 
@@ -156,17 +171,26 @@ ggplot(data = d, aes(x = artausbildung, fill = artausbildung))+
 
 ### subject of studies
 
-```{r, faecher}
+```{r, faecher_data}
 
 
 faecher <-  d %>%
-  pivot_longer(c(Archaeologie:Restaurierung),
+  pivot_longer(c(Archaeologie:studienfach.other.),
              names_to = "fach",
-             values_to = "ja") %>%
-  filter(ja == "Ja")
+             values_to = "ja",
+             values_drop_na = FALSE) %>%
+  filter(ja != "Nein" &  ja != "N/A")
+
+faecher$fach <- ifelse(faecher$fach == "studienfach.other.", faecher$ja, faecher$fach)
+
+```
+
+```{r, faecher_textmining_all}
+
 
 tab_fach <- as.data.frame(table(faecher$fach))
 
+write.csv2(tab_fach, "../data/derived_data/faecheraufstellung.csv", fileEncoding = "UTF-8")
 
   # text mining "sonstige" für Fächer
   
@@ -223,15 +247,29 @@ studfach_alle$Var1 <- recode(studfach_alle$Var1,
 
 
 studfach_alle %>%
-  filter(Freq > 2) %>%
+ # filter(Freq > 2) %>%
   ggplot()+
   geom_bar(aes(x = reorder(Var1, Freq), y = Freq), stat = "identity")+
   labs(x = "subjects", 
-       y = "frequency (> 2)", 
+     #  y = "frequency (> 2)", 
        name = "Main subject of respondent")+
     coord_flip()
 
 ```
+
+## Bereinigung des Datensatzes
+
+```{r}
+
+# Liste der Fächer, die wir bei uns sehen:
+
+community <- c("Archaeologie", "Digital Humanities", "Museumswissenschaften", "Anthropologie", "Grabungstechnik", "Architektur.Bauforschung", "Geographie", "Ägyptologie", "Ethnologie", "Restaurierung", "Denkmalpflege", "Archäoinformatik", "wissenschaftliche Ausstellungserarbeitung", "Angewandte Informatik", "Bibliotheks- und Informationwissenschaft",  "Kulturanthropologie", "Klimaforschung", "Numismatik", "Geophysik", "Antike Kulturen Vorderasiens und Ägyptens ", "Antike Kulturen Ägyptens und Vorderasiens ", "Bibliotheksreferendariat", "Prähistorische und Historische Archäologie", "Digitale Denkmaltechnologien (Baufoschung, MINT, Bauingenieurwesen, Heritage,...)", "Altamerikanistik/ Ethnologie", "Altertumswissenschaften", "Ethnologie und Erziehungswissenschaften", "Bibliothekswissenschaft", "Bibliotheksreferendariat mit Master Bibliotheks- und Informationswissenschaft", "Informationswissenschaften", "Informationsmanagement", "Organische Residuenanalysen", )
+
+
+faecher2 <- subset(faecher, faecher$fach %in% community)
+
+```
+
 
 
 # which year of studies
