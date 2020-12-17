@@ -800,31 +800,353 @@ kurse_intern %>%
 ggplot(aes(x = as.factor(kursquali), fill = quali_frage))+
 geom_bar(na.rm = TRUE, position = position_dodge())+
   labs(title = "Quality assessment of the courses",
-       x= "blue: 1 - very bad to 10 - very good) \n grey: 1 - I didn't learn anything to 10 - I am confident in the learned skills")+
+       x= "blue: 1 - very bad to 10 - very good \n grey: 1 - I didn't learn anything to 10 - I am confident in the learned skills")+
   scale_fill_manual(values = n4o_farben[c(1,10)],
                     labels = c("Quality of course", "Learn effect"),
                     name = "Assessment")+
+  geom_text(aes(x = 1, y = 50, label = paste("n = ", (nrow(kurse_intern)/2 ))))+
   theme_minimal()
 
 ```
 
 How much students and trainees perceive to have learned correlates obviously with their assessment of the quality of the course. All in all, most students and trainees evaluated most courses to be good and very good. 
 
-Nonetheless, there is a rather geowing variance the better the course was perceived to be. Even though the course had been of very good quality, they don't feel comfortable applying the techniques. The best learn effect students had whit courses they say was "good", 8 of 10 points, after this it turns. Here it may be, that students value courses with a higher content density as being "better", but this large amount of input made them feel more insecure in their own skills or they didn't have enough time to practice.
+Nonetheless, there is a rather growing variance in the learning effect the better the course was perceived to be. Even though the course had been of very good quality, students and trainees don't feel comfortable applying the techniques. The best learning effect students had whith courses they say were "good", 8 of 10 points, after this point the learning effect drops. Here it may be, that students value courses with a higher content density as being "better", but this large amount of input made them feel more insecure in their own skills or they didn't have enough time to practice.
+
+### Reasons for not attending RDM courses
+
+```{r}
+d %>%
+  pivot_longer(keinkurs.SQ001.:keinkurs.SQ004.,
+               names_to = "keinkurs_weil",
+               values_to = "keinkursja") %>%
+  filter(keinkursja == "Ja")%>%
+  ggplot()+
+  geom_bar(aes(x = keinkurs_weil), fill = n4o_farben[1])+
+  scale_x_discrete(labels = c("no time",
+                              "time overlap with other courses",
+                              "could not be credited",
+                              "no interest"))+
+  labs(x = "",
+       title = "Reasons not to attend RDM courses",
+       y = "Count (several mentions possible)" )+
+  theme_minimal()
+```
+
+There are several reasons, students and trainees did not partake in courses on RDM. Most cited are time constraints. This shows, how RDM is not currently part of regular curricula. Students cannot receive credit points, and as the normal course load of a full-time student is already tailored to a 40h week, it is difficult to take courses on top, especially if meeting deadlines of the so called "Regelstudium" for BAFöG-reliant students. *RANT OFF*   
+
+# Advanced external training opportunities
+
+Students and trainees were asked to share where they gained RDM skills if not at their home institution.
+
+We asked whether they learned on their own
+Haben Sie sich selbständig und autodidaktisch zu Themen des Datenmanagements fortgebildet? 
 
 
-# How do students and trainees deal with data
+```{r}
 
+library(magrittr)
+
+d$autodidakt <- factor(d$autodidakt, level = c("Ja", "Nein", "N/A"))
+ggplot()+
+geom_bar( aes(x = d$autodidakt), fill = n4o_farben[1])+
+  scale_x_discrete(breaks = c("Ja", "Nein", "N/A"))
+```
+
+Next we asked which channels those who did learn on their own, used:
+
+```{r}
+d_a <- 
+d %>%
+  pivot_longer(autodidaktwie.YT.:autodidaktwie.other.,
+               values_drop_na = TRUE,
+               values_to = "auto_ja",
+               names_to = "selfhelp") %>%
+  filter(auto_ja != "Nein") %>%
+  filter(auto_ja != "N/A")%>%
+  mutate(selfhelp = na_if(selfhelp, "autodidaktwie.other." ))%>%
+  mutate(selfhelp = coalesce(selfhelp, auto_ja)) %>%
+  mutate(selfhelp = recode(selfhelp,
+                           "BA Studium in Soziologie" = "vorheriges Studium / Ausbildung",
+                           "IT Ausbildung" = "vorheriges Studium / Ausbildung",
+                           "Frühere Erfahrung/Ausbildung" = "vorheriges Studium / Ausbildung",
+                           "vorheriges Studium" = "vorheriges Studium / Ausbildung",
+                           "über die Arbeit" = "Arbeitserfahrung",
+                           "über das Deutsche Archäologische Institut" = "Arbeitserfahrung",
+                           "Fortbildungen durch meinen Chef im Rahmen meines Jobs an der Uni für ein Grabungsprojekt" = "Arbeitserfahrung",
+                           "Arbeit (HiWi)" = "Arbeitserfahrung",
+                           "im früheren Arbeitsbild " = "Arbeitserfahrung",
+                           "Tagung" = "Tagungen",
+                           "CAA Deutschland Tagung" = "Tagungen",
+                           "Kolloquien mit anderen Studierenden" = "Tagungen",
+                           "Suche nach statistischen Methodiken im Internet" = "autodidaktwie.online.",
+                           "Skripten von Lehrveranstaltungen" = "autodidaktwie.LB.",
+                           "praktisch durch Praxisanteil im Bibliotheksreferendariat an einer Universitätsbibliothek" = "Arbeitserfahrung",
+                           "Learning by doing" = "unspezifisch",
+                           "Selbst aktiv Kurse gesucht und besucht." = "unspezifisch",
+                           "Museum Digital" = "autodidaktwie.online."))
+d_a %>%
+  filter(selfhelp != "vorheriges Studium / Ausbildung") %>%
+  filter(selfhelp != "unspezifisch") %>%
+  group_by(selfhelp) %>%
+  summarise(n = n())%>% 
+  ggplot()+
+  geom_col(aes(x = reorder(selfhelp, n), y =  n, fill = selfhelp),
+            show.legend=FALSE)+
+  scale_x_discrete(breaks = c("autodidaktwie.bek." , "autodidaktwie.LB.", "autodidaktwie.online.", "autodidaktwie.YT.", "Arbeitserfahrung", "Tagungen"),
+                 labels = c("acquaintances", "books & learning materials", "online manuals and materials", "YouTube (or similar)", "at work", "at conferences"))+
+  scale_fill_manual(values = n4o_farben[1:6])+
+  labs(x = "", 
+       y = "count (several mentions possible)",
+       title = "Ways respondents learn about RDM on their own")+
+  geom_text(aes(x = 1, y = 60, label = paste("n =", length(d$autodidakt[d$autodidakt == "Ja"]))))+
+  coord_flip()
+  
+```
+
+
+Getting help from acquaintances is the most important way for people to learn about Research Data Management outside of structured courses. Online material and Youtube and similar video platforms are an important source for learning about RDM, only slightly more often named than books and other manuals. Some report they learned a lot at work or at conferences. 
+
+### External courses
+
+Do students and trainees take courses outside their home institution and if yes, how many did they take?
+
+```{r extkurs}
+d %>%
+  filter(extkurse != "N/A") %>%
+  ggplot()+
+  geom_bar(aes(x = extkurse), fill = n4o_farben[1])+
+    geom_text(aes(x = 0.5, y = 230, label = paste("N/A =", length(d$extkurse[d$extkurse == "N/A"]))))+
+  theme_minimal()
+```
+
+Only very few students and trainees took part in courses outside their home institution.
+
+```{r n_nextkurs}
+
+d %>%
+  filter(nextkurse > 0) %>%
+  ggplot()+
+  geom_bar(aes(x = nextkurse), fill = n4o_farben[1])+
+  geom_text(aes(x = 4, y = 8, label = paste("n = ", nrow(d %>% filter(nextkurse > 0)))))+
+  labs(x = "Number of courses taken outside of own institution")+
+  scale_y_continuous(breaks = c(2,4,6,8))+
+  theme_minimal()
+```
+
+## Which topics are featured in the external courses
+
+```{r jahrext}
+d_ext_j <-
+d %>%
+  pivot_longer(c(jahrextkurs1, jahrextkurs2, jahrextkurs3),
+               values_to = "jahrext",
+               names_to = "kursnummer",
+               values_drop_na = TRUE)
+d_ext_j %>%
+  ggplot()+
+  geom_histogram(aes(x = jahrext), fill = n4o_farben[1])+
+  theme_minimal()
+```
+
+Since 2015 the number of course students and trainees join has grown significantly. We see a trend here, that may correlate with the rising digitalisation of research ... see andere auswertung.
+
+
+## topics people searched further training in
+```{r}
+
+d_ext <- d %>% 
+  pivot_longer(c(extkursthem1.3D.:extkursthem1.other., extkursthem2.3D.:extkursthem2.other., extkursthem3.3D.:extkursthem3.other.), # fasse diese zusammen
+               names_to = "extkurs_them", # in dieser neuen spalte 
+               names_prefix = "extkursthem", #lösch diesen prefix
+               values_to = "extkursthem_ja", # ja oder nein in diese spalte
+               values_drop_na = TRUE)%>% # lösch alle NA
+  filter(extkursthem_ja != "Nein" & extkursthem_ja != "N/A" & extkursthem_ja != "")%>%
+   mutate(extkurs_them = na_if(extkurs_them, "1.other.")) %>%
+   mutate(extkurs_them = na_if(extkurs_them, "2.other.")) %>%
+   mutate(extkurs_them = na_if(extkurs_them, "3.other.")) %>%
+   mutate(extkurs_them = coalesce(extkurs_them, extkursthem_ja))
+ 
+d_ext$extkurs_them <- gsub('[0-9]+.', '', d_ext$extkurs_them)   
+
+d_ext$extkurs_them <- d_ext$extkurs_them %>%
+  recode( "3D." = "3D-modelling / 3D-scans / 3D-photogrammetrie",
+          "arch." = "Archiving",
+          "auszsprache." = "Markup language",
+          "bildbearb." = "Image manipulation",
+          "cad." = "CAD",
+          "datenb." = "Data bases",
+          "datenkur." = "Data curation",
+          "datensich." = "Data security",
+          "datenman." = "Data management",
+          "diged." = "Digital editions",
+          "digdatenausw." = "Digital data analysis",
+          "digdok." = "Digital documentation",
+          "digmetheor." = "Digital method and theory",
+          "digressour." = "Digitale ressources (e.g. ZENON, Arachne, ...)", 
+          "digverm." = "Digital survey",
+          "photogramm." = "Photogrammetrie",
+          "programmierung." = "Scripting languages and programming (R, Python, CSS)",
+          "tools." = "Software and tools",
+          "spatanal." = "Spatial analysis",
+          "stat." = "Statistics",
+          "textanal." = "Text analysis",
+          "onlineress." = "Online ressources",
+          "metad." = "Metadata", 
+          "wbtechn." = "Web technologies",
+          "gis." = "GIS / Web GIS",
+          "geophys." = "Geophysics",
+          "urheber." = "Copy right",
+          "Langzeitarchivierung" = "Long time archiving",
+          "Digitale Lehre" = "Digital Education")
+
+d_ext %>% 
+  group_by(extkurs_them)%>%
+  summarize(n = n())%>%
+  ggplot()+
+  geom_col(aes(x = reorder(extkurs_them, n), y = n), fill = n4o_farben[1])+
+  coord_flip()+
+  labs(x = "",
+       y = "count (several topics per course)")+
+  geom_text(aes(x = 1, y = 12, label = paste("n =  ", length(!is.na(d_ext_j$jahrext)),"courses")))+
+  theme_minimal()
+
+```
+
+There are several topics people looking for advanced training in Research Data Management found interesting. Data managemtn, software,tools and databases are the most commen topics.
+
+### Where
+
+Are there certain hubs, where people look for training? We are aware that these answers need to be taken cautiously: The number of people taking further training is too small to be fully representative. 
+
+
+
+```{r}
+d  %>% 
+  pivot_longer(c(extkurswo, extkurswo2, extkurswo3),
+               values_to = "extwo",
+               names_to = "extnr",
+               values_drop_na = TRUE)  %>%
+  mutate(extwo = recode(extwo,
+                         "Bochum/Deutschland"  = "Bochum",
+                        "Berlin / Deutschland" = "Berlin",
+                        "Tübingen, Deutschland" = "Tübingen",
+                        "München/Bayern" = "München (Munich)",
+                        "Berlin/Berlin" = "Berlin",
+                        "Berlin/Deutschland" = "Berlin",
+                        "Paris / Frankreich" = "Paris/France",
+                        "Potsdam/Deutschland" = "Potsdam",
+                         "Köln/Deutschland" = "Köln (Cologne)",
+                         "Köln / Deutschland" = "Köln (Cologne)",
+                        "Aarhus / Dänemark" = "Aarhus/Denmark",
+                        "München Bayern" = "München (Munich)",
+                        "Hannover / Niedersachsen" = "Hannover"))%>%
+  pivot_longer(c(artextkurs1, artextkurs1.other., artextkurs2, artextkurs2.other., artextkurs3, artextkurs3.other.),
+               names_to = "artextnr",
+               values_to = "art_ext",
+               values_drop_na = TRUE)%>%
+  filter(art_ext != "Sonstiges")%>%
+  mutate(art_ext = recode(art_ext,
+                          "CAA Tagung" = "Workshop während einer Konferenz",
+                          "Konferenz " = "Workshop während einer Konferenz",
+                          "Frühere Arbeitsstelle" = "Fortbildung vom Arbeitgebenden",
+                          "im Rahmen des Bibliotheksreferendariats" = "Fortbildung vom Arbeitgebenden",
+                          "Online Kurs einer Uni in den USA" = "Webinar"))%>%
+  group_by(extwo, art_ext)%>%
+  summarise(count = n())%>%
+  ggplot()+
+  geom_col(aes(x = reorder(extwo, count), y = count, fill = art_ext))+
+  scale_y_continuous(breaks = c(2,4,6,8))+
+  scale_fill_manual(values = n4o_farben[c(1:5,7)],
+                    name = "Kind of training",
+                      labels = c("organised by students", "organised by employer", "at another university", "summer- or winter school", "webinar", "workshop during a confernce"))+
+  labs (x = "")+
+  coord_flip()+
+  theme_minimal()
+
+```
+
+
+Nonetheless we notice that in Berlin a number of training possiblities seem to exist. Students and trainees take part in interantional summer and winterschools. Training possibilities at conferences are visited regularly (CAA Germany chapter meetings where mentioned several times). 
+
+
+### Learning on the job
+
+While the other questions where reserved for structured learning in course, one questioned aimed at whether students and trainees received RDM knowledge "on the job".
+
+```{r}
+
+d%>%
+  filter(jobfortbildung != "N/A") %>%
+ggplot()+
+  geom_bar(aes(x = jobfortbildung), fill = n4o_farben[1])+
+  scale_x_discrete(labels = c("Yes", "No"))+
+  theme_minimal()+
+  labs(x = "I learned RDM skills on the job")
+```
+
+
+# How do students and trainees deal with data and software
+
+```{r}
+d %>%
+  mutate(softwarehaeufig.other. = gsub(";", ",", softwarehaeufig.other.))%>%
+  separate(softwarehaeufig.other., c("A", "B","C","D"), sep = ",")%>%
+  pivot_longer(c(softwarehaeufig.A1.:softwarehaeufig.A13.,A:D),
+               names_to = "software",
+               values_to = "software_ja",
+               values_drop_na = TRUE) %>%
+  filter(software_ja != "Nein" & software_ja != "N/A") %>%
+  mutate(software = na_if(software, "A")) %>%
+  mutate(software = na_if(software, "B")) %>%
+  mutate(software = na_if(software, "C")) %>%
+  mutate(software = na_if(software, "D")) %>%
+  mutate(software = coalesce(software, software_ja))%>%
+  mutate(software = recode(software,
+                         "softwarehaeufig.A1."  = "Excel",
+                         "softwarehaeufig.A2."  = "QGIS",
+                         "softwarehaeufig.A3."  ="Microsoft Access",
+                         "softwarehaeufig.A4."  = "SPSS",
+                         "softwarehaeufig.A5." = "Word",
+                         "softwarehaeufig.A6." = "LibreOffice",
+                         "softwarehaeufig.A7." = "LibreCalc",
+                         "softwarehaeufig.A8."  = "ArcGIS",
+                         "softwarehaeufig.A9."  = "AdobeAcrobat Reader",
+                         "softwarehaeufig.A10."  = "MeshLab",
+                         "softwarehaeufig.A11." = "WinBASP",
+                         "softwarehaeufig.A12." = "Adobe InDesign",
+                         "softwarehaeufig.A13." = "Adobe Photoshop",
+                         "Rstudio" = "R, Rstudio",
+                         "RStudio" = "R, Rstudio",
+                         "R" = "R, Rstudio",
+                         " R" = "R, Rstudio",
+                         "Latex" = "LaTeX",
+                         " LaTex" = "LaTeX",
+                         " Inkscape" = "Inkscape",
+                          "Power Point"= "Powerpoint",
+                          " Power Point"= "Powerpoint",
+                         " powerpoint" = "Powerpoint",
+                         " PowerPoint" = "Powerpoint",
+                         " Power Point" = "Powerpoint",
+                         "autocad" = "AutoCAD",
+                         "Autocad" = "AutoCAD",
+                         "AUTOCad" = "AutoCAD",
+                         "archicad" = "ArchiCAD",
+                         "openoffice" = "OpenOffice",
+                         "Matlab" = "MatLab",
+                         "Gimp" = "GIMP"))%>%
+  group_by(software)%>%
+  summarise(Count = n())%>%
+  filter(Count > 2)%>%
+ggplot()+
+  geom_col(aes(x = reorder(software, Count), y = Count))+
+  coord_flip()
+```
 
 7. Umgang mit Daten?
   7a Such- und Findeverhalten, 
   7b Welche back-up Strategien werden benutzt
 
-8. Gehen Leute in Fortbildungen? 
-  8a zu welchen Themen?
-
-9. Bilden sich Leute selber fort?
-  9a zu welchen Themen?
 
 10. Warum werden Kurse nicht besucht?
 
