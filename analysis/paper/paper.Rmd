@@ -101,6 +101,8 @@ d <- d %>%
         Restaurierung = studienfach.SQ019.)
 
 
+
+
 d <- d %>%
   rename(Interesse.1 = warumkurs1.SQ001.,
          Pflichtveranstaltung.1 = warumkurs1.SQ002.,
@@ -133,41 +135,12 @@ d <- d %>%
 ```
 
 
-how many respondents: in total `r nrow(d)` number of answers
+```{r farbdef}
+n4o_tafarben <- c("#9B163C", "#9506C5", "#4DA1EE", "#36CE97",  "#4CCA33","#FF962E", "#FF6243")
 
-## demographics of respondents
-
-### age
-
-```{r age}
-library(ggplot2)
-
-sum_alter  <- summary(d$alter)
-
-ggplot(data = d)+
-  geom_histogram(aes(x = alter), binwidth = 1)+
-  xlab("age")+
-  geom_text(aes(x = 65, y = 20, label = paste("n =", nrow(d))))+
-  geom_text(aes(x = 65, y = 10, label = paste("NA's = ", sum_alter[7])))
-
-
-
+n4o_farben <- c("#072A54", "#9B163C", "#9506C5", "#4DA1EE", "#36CE97",  "#4CCA33","#FF962E", "#FF6243", "#005F8E", "#6A6D71", "#A6AAAC", "#E8EAEB")
 ```
 
-Most of the respondents are aged between `r sum_alter[2]` (first quartile) and `r sum_alter[5]` (third quartile) years old. The youngest person is `r sum_alter[1]` and the oldest `r sum_alter[6]`. Median age is `r sum_alter[3]` and mean age is `r sum_alter[4]`. We can therfore conclude that we were able to reach the group of 20-29 year olds which was our aim. 
-
-### type of training
-
-
-```{r training}
-
-ggplot(data = d, aes(x = artausbildung, fill = artausbildung))+
-  geom_bar()+
-  geom_text(stat='count', aes(label = after_stat(count)), hjust=-0.01)+
-  labs(x = "type of training")+
-  guides(fill = FALSE)+
-  coord_flip()
-```
 
 ### subject of studies
 
@@ -185,70 +158,16 @@ faecher$fach <- ifelse(faecher$fach == "studienfach.other.", faecher$ja, faecher
 
 ```
 
-```{r, faecher_textmining_all}
+```{r, faecher_all, eval = FALSE}
 
 
 tab_fach <- as.data.frame(table(faecher$fach))
 
 write.csv2(tab_fach, "../data/derived_data/faecheraufstellung.csv", fileEncoding = "UTF-8")
 
-  # text mining "sonstige" für Fächer
-  
-library("tm")
-library("SnowballC")
-
-  # bwl und betriebswirtschaftslehre zusammenfügen, bibliotheks und informationswissenschaft, journalisitik und journalismus zusammenfügen
-d$studienfach.other.  <- gsub("bwl", "betriebswirtschaftslehre", d$studienfach.other.)
-d$studienfach.other.  <- gsub("bibliotheks", "bibliothekswissenschaften", d$studienfach.other.)
-d$studienfach.other.  <- gsub("journalistik", "journalismus", d$studienfach.other.)
-
-docs <- Corpus(VectorSource(d$studienfach.other.))
-
-#inspect(docs)
-
-# Remove punctuations
-#docs <- tm_map(docs, removePunctuation)
-
-# Eliminate extra white spaces
-docs <- tm_map(docs, stripWhitespace)
-
-# Text stemming
-# docs <- tm_map(docs, stemDocument)
-docs <- tm_map(docs, removeWords, stopwords("german"))
-
-# Document matrix is a table containing the frequency of the words. 
-# Column names are words and row names are documents. 
-# The function TermDocumentMatrix() from text mining package can be used as follow :
-dtm <- TermDocumentMatrix(docs)
-m <- as.matrix(dtm)
-v <- sort(rowSums(m),decreasing=TRUE)
-studienfach_sonst <- data.frame(word = names(v),freq=v)
-head(studienfach_sonst, 30)
-
-## to do! 
-# soziale arbeit wieder zusammenfügen,
-# informatik zu mint, archäoinformatik zu DH?
-# antike kulturen vorderasiens und ägyptens?
-
-# bauforschung?
-
-colnames(studienfach_sonst)  <- c("Var1", "Freq")
-
-studfach_alle  <- rbind(tab_fach, studienfach_sonst)
-
-studfach_alle <- studfach_alle[!studfach_alle$Var1 == "arbeit",]
-#studfach_alle$Var1[studfach_alle$Var1 == "soziale"] <- "soziale arbeit"
-studfach_alle <- studfach_alle[!studfach_alle$Var1 == "relations",]
-
-studfach_alle$Var1 <- recode(studfach_alle$Var1,
-                                      soziale = "Soziale Arbeit",
-                             public = "public relations")
 
 
-
-studfach_alle %>%
- # filter(Freq > 2) %>%
-  ggplot()+
+  ggplot(data = tab_fach)+
   geom_bar(aes(x = reorder(Var1, Freq), y = Freq), stat = "identity")+
   labs(x = "subjects", 
      #  y = "frequency (> 2)", 
@@ -263,61 +182,148 @@ studfach_alle %>%
 
 # Liste der Fächer, die wir bei uns sehen:
 
-community <- c("Archaeologie", "Digital Humanities", "Museumswissenschaften", "Anthropologie", "Grabungstechnik", "Architektur.Bauforschung", "Geographie", "Ägyptologie", "Ethnologie", "Restaurierung", "Denkmalpflege", "Archäoinformatik", "wissenschaftliche Ausstellungserarbeitung", "Angewandte Informatik", "Bibliotheks- und Informationwissenschaft",  "Kulturanthropologie", "Klimaforschung", "Numismatik", "Geophysik", "Antike Kulturen Vorderasiens und Ägyptens ", "Antike Kulturen Ägyptens und Vorderasiens ", "Bibliotheksreferendariat", "Prähistorische und Historische Archäologie", "Digitale Denkmaltechnologien (Baufoschung, MINT, Bauingenieurwesen, Heritage,...)", "Altamerikanistik/ Ethnologie", "Altertumswissenschaften", "Ethnologie und Erziehungswissenschaften", "Bibliothekswissenschaft", "Bibliotheksreferendariat mit Master Bibliotheks- und Informationswissenschaft", "Informationswissenschaften", "Informationsmanagement", "Organische Residuenanalysen", )
+community <- c("Archaeologie", "Digital.Humanities", "Digital Humanities", "Museumswissenschaften", "Anthropologie", "Grabungstechnik", "Architektur.Bauforschung", "Geographie", "Ägyptologie", "Ethnologie", "Restaurierung", "Denkmalpflege", "Archäoinformatik", "wissenschaftliche Ausstellungserarbeitung", "Angewandte Informatik", "Bibliotheks- und Informationwissenschaft",  "Kulturanthropologie", "Klimaforschung", "Numismatik", "Geophysik", "Antike Kulturen Vorderasiens und Ägyptens ", "Antike Kulturen Ägyptens und Vorderasiens ", "Bibliotheksreferendariat", "Prähistorische und Historische Archäologie", "Digitale Denkmaltechnologien (Baufoschung, MINT, Bauingenieurwesen, Heritage,...)", "Altamerikanistik/ Ethnologie", "Altertumswissenschaften", "Ethnologie und Erziehungswissenschaften", "Bibliothekswissenschaft", "Bibliotheksreferendariat mit Master Bibliotheks- und Informationswissenschaft", "Informationswissenschaften", "Informationsmanagement", "Organische Residuenanalysen")
 
 
-faecher2 <- subset(faecher, faecher$fach %in% community)
+d <- subset(faecher, faecher$fach %in% community)
+
+d$fach[d$fach == "Antike Kulturen Vorderasiens und Ägyptens "] <- "Antike Kulturen Ägyptens und Vorderasiens "
+
+d$fach[d$fach == "Bibliotheksreferendariat mit Master Bibliotheks- und Informationswissenschaft"] <- "Bibliotheks- und Informationswissenschaft"
+
+d$fach[d$fach == "Bibliotheks- und Informationswissenschaft" ] <- "Bibliotheks- und Informationswissenschaft"
+d$fach[d$fach == "Bibliotheks- und Informationwissenschaft" ] <- "Bibliotheks- und Informationswissenschaft"
+d$fach[d$fach == "Bibliotheksreferendariat" ] <- "Bibliotheks- und Informationswissenschaft"
+d$fach[d$fach == "Bibliothekswissenschaft" ] <- "Bibliotheks- und Informationswissenschaft"
+
+d$fach[d$fach == "Informationswissenschaft" ] <- "Bibliotheks- und Informationswissenschaft"
+d$fach[d$fach == "Informationswissenschaften" ] <- "Bibliotheks- und Informationswissenschaft"
+
+ethn <- c("Ethnologie", "Kulturanthropologie", "Altamerikanistik/ Ethnologie", "Ethnologie und Erziehungswissenschaften")
+
+d$fach[d$fach %in% ethn] <- "Ethnologie/Kulturanthropologie"
+
+tab_fach <- as.data.frame(table(d$fach))
+
+# to check:
+  ggplot(data = tab_fach)+
+  geom_bar(aes(x = reorder(Var1, Freq), y = Freq), fill = "#072A54", stat = "identity")+
+  labs(x = "subjects", 
+     #  y = "frequency (> 2)", 
+       name = "Main subject of respondent")+
+    coord_flip()+
+    theme_minimal()
 
 ```
 
 
+The NFDI4Objects survey garnered a lot of attention. We are happy, that all in all xxx students and trainees answered our quetions. They  come from a much broader scientific background than the NFDI4Objects consortium will focus on. Therefore, for this study, we chose to reduce the respondents to those subjects, which belong to our community. 
 
-# which year of studies
+So there were `r nrow(d)` respondents who belong to our target community. NFDI4Objects is delighted to garner such a large number of answers from students and trainees and will be able to model the course development and training opportunities according to their needs.
+
+## demographics of respondents
+
+We will first look at the demographics of the NFDI4Objects community answers. 
+
+### age
+
+```{r age}
+library(ggplot2)
+
+sum_alter  <- summary(d$alter)
+
+ggplot(data = d)+
+  geom_histogram(aes(x = alter), binwidth = 1,  fill = "#072A54")+
+  xlab("age")+
+  geom_text(aes(x = 65, y = 20, label = paste("n =", nrow(d))))+
+  geom_text(aes(x = 65, y = 10, label = paste("NA's = ", sum_alter[7])))+
+  theme_minimal()
+
+
+
+```
+
+Most of the respondents are aged between `r sum_alter[2]` (first quartile) and `r sum_alter[5]` (third quartile) years old. The youngest person is `r sum_alter[1]` and the oldest `r sum_alter[6]`. Median age is `r sum_alter[3]` and mean age is `r sum_alter[4]`. Though the age is not normal-distributed, we are glad to see a good cross-section through all age-classes that usually are in the training stage.
+
+
+```{r, eval= FALSE}
+shapiro.test(d$alter)
+```
+
+
+
+### type of training
+
+
+```{r training}
+
+ artausb <- as.data.frame(table(d$artausbildung))
+
+ggplot(data = artausb, aes(x = reorder(Var1, Freq), y = Freq))+
+  geom_col(aes(fill = Var1))+
+  scale_fill_manual(breaks = artausb$Var1,
+                        values = n4o_tafarben)+
+  geom_text(aes(label = artausb$Freq), hjust=-0.01)+
+  labs(x = "type of training")+
+  guides(fill = FALSE)+
+  coord_flip()+
+  theme_minimal()
+  
+```
+
+Looking at in what kind of training situation our respondents are, we can observe most being students at BA and MA level. There are fewer phD-students and even less people taking a Volontariat or an advanced training. 
+
+
+### type of training and institution
 
 ```{r ausbildung}
 
-ggplot(data = d)+
-  geom_histogram(aes(x = jahrausbildung, fill =  artausbildung, col = artausbildung), alpha = 0.3)
+ ausb_inst <- as.data.frame(table(d$artausbildung, d$institution))
+
+ggplot(data = ausb_inst, aes(x = reorder(Var2, Freq), y = Freq))+
+  geom_col(aes(fill = Var1))+
+  scale_fill_manual(values = n4o_tafarben)+
+  labs(x = "institution of training")+
+  guides(fill = FALSE)+
+  coord_flip()+
+  theme_minimal()
+
+#+
+#  geom_text(aes(x = ausb_inst$Var2,
+#                y = cumsum(ausb_inst$Freq)),# hjust = 0.5,
+#            label = ifelse(ausb_inst$Freq > 0, ausb_inst$Freq, ""))
+
+
+
 
 ```
 
+We can see here that most students study at a university, while less than half of that study at a Hochschule (technical uni?). At museums most respodents are in a Volontariat and at the Heritage Management institutions respondents take advanced trainings.
 
 ### gender
 
 ```{r gender}
 
 gender <- as.data.frame(table(d$geschlecht))
-gender$Freq[gender$Var1 == "keine Angabe"] <- gender$Freq[gender$Var1 == "keine Angabe"] + gender$Freq[gender$Var1 == ""]
-gender <- gender[-(gender$Var1 == ""),]
 
 ggplot(data = gender, aes(x = reorder(Var1, -Freq), y = Freq))+
-  geom_bar(stat = "identity" )+
+  geom_bar(stat = "identity",  fill = "#072A54")+
     labs(x = "gender", 
        y = "frequency", 
        name = "Gender of respondent")+
-    geom_text(aes(label = Freq), hjust = 0.5)+
-theme_bw()
+    geom_text(aes(label = Freq), vjust = -0.7)+
+  theme_minimal()
 ```
 
-### institution
-
-```{r inst}
-
-inst  <- as.data.frame(table(d$institution))
-
-inst$Var1[inst$Var1 == ""] <- NA
-
-ggplot(data = inst, aes(x = reorder(Var1, -Freq), y = Freq))+
-  geom_bar(stat = "identity")+    
-  geom_text(aes(label = Freq), hjust = 0.5)+
-  coord_flip()
-
-
+```{r}
+gend_art <- as.data.frame(table(d$geschlecht, d$artausbildung))
 ```
 
+Most respondents are female. This is typical for German students in archaeological subjects. Gender does not relate to kind of studies being undertaken, just in the case of "Volontariat", which is obviously more female (`r gend_art$Freq[gend_art$Var1 == "weiblich" & gend_art$Var2 == "Volontariat"]` of `r sum(gend_art$Freq[gend_art$Var2 == "Volontariat"])` being women.
 
 
-## 1. Welche Kurse wurden bereits belegt?
+
+# Which kind of courses were taken already
 
 ```{r fdmkursejanein}
 fdm_ja <- d %>%
@@ -334,7 +340,7 @@ fdm_wn <- d %>%
 
 Students were asked to say, whether there are courses at their institution which touched on research data management. Of those that answered `r fdm_ja` answered yes, `r fdm_nein` said "no". Most (`r fdm_wn`) were not sure, suggesting there were no courses in their immediate environmenht or they were unsure, what research data management entailed. 
 
-```{r}
+```{r berechnung}
 kursja <- d %>%
   filter(Kurswahrgenommenjane == "ja") %>%
   nrow()
@@ -344,7 +350,9 @@ kursnein <- d %>%
   nrow()
 
 ggplot()+
-  geom_bar(data = d, aes(x = Kurswahrgenommenjane))
+  geom_bar(data = d, aes(x = Kurswahrgenommenjane),  fill = "#072A54")+
+  labs(x = "Did you take a course with elements of RDM?")+
+  theme_minimal()
 ```
 Next, students were asked, whether they had joined a course on data management. Here we can see that most (`r kursnein`) didn't, but `r kursja` did.
 
@@ -354,48 +362,119 @@ Those who had visited some courses were asked to name the amount of courses they
 sum_nkurse <- summary(d$nkurse)
 
 ggplot()+
-  geom_histogram(data = d, aes(x = nkurse))
-
+  geom_bar(data = d, aes(x = nkurse),  fill = "#072A54")+
+  geom_text(aes(x = 10, y = 20, label = paste("n =", nrow(d)-sum_nkurse[7])))+
+  scale_x_continuous(name = "number of courses taken",
+                   breaks = c(1:10),
+                    labels = as.character(1:10))+
+  theme_minimal()
 ```
-Most of the respondents, who said they had already taken a course on data management, named between `r sum_nkurse[2]` (first quartile) and `r sum_nkurse[5]` (third quartile) courses. The median is `r sum_nkurse[3]` and mean is `r sum_nkurse[4]`. The maximal value of `r sum_nkurse[6]` is a clear outlier.
+Most of the respondents, who said they had already taken a course on data management, named between `r sum_nkurse[2]` (first quartile) and `r sum_nkurse[5]` (third quartile) courses. The median is `r sum_nkurse[3]` and mean is `r sum_nkurse[4]`. The maximal value of `r sum_nkurse[6]` is an outlier.
 
-## 2. ist das abhängig von dem Fach, welches studiert wird?
+## Does the amount of courses taken vary with studied subject?
 
 Next we look at how these data change in response to the studied subject.
 
 ```{r}
+kurs_fach <- as.data.frame(table(d$fach, d$Kurswahrgenommenjane))
+```
 
-kurs_fach <- as.data.frame(table(faecher$fach, faecher$Kurswahrgenommenjane))
+Whether one has or has not taken a course touching on RDM at the institution they are at, is dependent on the subject studied. Whereas students of DH or library and information studies, trainees in Excavation technique and Geophysicsts almost always already took such course. Students in Archaeology, Architecture and Building Studies and Anthropology more often didnot take courses yet. The number of courses taken also varies>
 
-ggplot()+
-  geom_col(data = kurs_fach, aes(x = reorder(Var1, Freq), y = Freq, fill = Var2))+
+```{r}
+d %>%
+  group_by(fach) %>% 
+  filter(n()>5)%>%
+ggplot(aes(x = fach, y = nkurse))+
+  geom_boxplot()+
+  geom_jitter(alpha = 0.5)+
+  labs(x = "subjects that appear more than 5 times")+
+  scale_y_continuous(name = "number of courses taken",
+                   breaks = c(1:10),
+                    labels = as.character(1:10))+
   coord_flip()
 ```
 
 
+# Details on the taken courses
 
 ```{r}
+# note: don't pivot longer for subject or reason
+
+d_kurs1 <- data.frame(d$fach, d$alter, d$id, d$artausbildung, d$jahrausbildung, d$institution, d$kursfach1, d$bundesland1, d$bundesland1.other., d$kursjahr1, d$kurspflicht1, d$kursquali1.SQ001., d$kursquali1.SQ002.)
+
+d_kurs2 <- data.frame(d$fach, d$alter, d$id, d$artausbildung, d$jahrausbildung, d$institution, d$fach2, d$bundesland2, d$bundesland2.other., d$kursjahr2, d$kurspflicht2, d$kursquali2.SQ001., d$kursquali2.SQ002.)
+
+d_kurs3 <- data.frame(d$fach, d$alter, d$id, d$artausbildung, d$jahrausbildung, d$institution, d$fach3, d$bundesland3, d$bundesland3.other., d$kursjahr3, d$kurspflicht3, d$kursquali3.SQ001., d$kursquali3.SQ002.)
+
+cnames <- c("fach", "alter", "id", "artausbildung", "jahrausbildung", "institution", "kursfach", "bundesland", "bundesland.sonst", "kursjahr", "kurspflicht", "kursquali1", "kursquali2") 
+
+
+colnames(d_kurs1) <-  cnames 
+colnames(d_kurs2) <-  cnames 
+colnames(d_kurs3) <-  cnames 
+
+kurse_intern <-  rbind(d_kurs1, d_kurs2, d_kurs3)
+
+```
+
+
+## looking at Bundesland
+
+```{r inst_kurse_bund }
+kurse_intern %>%
+  filter(!is.na(bundesland)) %>%
+  group_by(bundesland) %>%
+  summarize(Count=n()) %>%
 ggplot()+
-  geom_histogram(data = faecher, aes(x = nkurse, fill = fach))
+  geom_col(aes(x = reorder(bundesland, Count), y = Count), fill = "#072A54" )+
+  geom_text(aes(x = 7, y = 25, label = "Wien und Kairo"))+
+  geom_text(aes(x = 1, y = 80, label = paste("n = ", nrow(kurse_intern))))+
+  coord_flip()+
+  theme_minimal()
 ```
 
-Outlier: MINT-subjects. In most other subjects: A lot of ppl took one course, and then it gradually gets less and less.
+Looking at in which Land in Germany most respondents did their courses, it is easy to see, that NRW has by far the largest amount of courses, that were taken. NRW is a popolous Land and therefore it is not surpriseing a large number of respondents should study and learn there. It also hosts two universities with courses on digital and computational archaeology integrated into the curriculum (Cologne and Bonn).
 
+Please note, this also is a mirror of who answered the survey and of course one course will have been visited by several students and trainees.
 
-```{r no_courses_subject}
-library(kableExtra)
-table(faecher$fach, faecher$nkurse) %>%
-  kable()
-```
-
-
-## 3. Was für Kurse wurden bereits besucht?
-
-Respondents were asked to give the details of up to three courses they already took.
+### Development through the years
 
 ```{r}
 
-#umofrmung der daten: kursbeschreibung gibt thema, kursfach, in welchem fach das angeboten wurde, bundsland,
+kurs_inst_jahr <- as.data.frame(table(kurse_intern$kursjahr, kurse_intern$bundesland))
+
+bndl_viel <- kurs_inst_jahr %>%
+  filter(!is.na(Var2) & Var2 != "")%>%
+  group_by(Var2) %>% 
+  summarise(Frequency = sum(Freq))%>%
+filter(Frequency > 8)
+  
+kurs_inst_jahr %>%
+  filter(Var2 %in% bndl_viel$Var2) %>%
+ggplot(aes(x = Var1, col = Var2, y = Freq))+
+  geom_point() +
+  geom_line(aes(group = Var2))+
+  theme_minimal()+
+  scale_colour_manual(values = n4o_farben[1:8])+
+  labs(x = "Year", 
+       y = "Amount", 
+       col = "Bundesland \nwith more than 8 courses",
+       title = "Number of courses featuring RDM per year and Bundesland")+
+
+
+  ggsave("../figures/first_draft_jahr_kurs.png", dpi = 300, units = "cm", height = 10)
+
+```
+
+There is a development of the amount of courses taken over the years. Especially large is the rise in course taken in Nordrhein-Westphalia, but also in Baden-Wuerttemberg, Lower Saxony and Berlin there is a rise courses being visited over the years. 
+
+
+## What kind of topics where taught in already taken courses?
+
+```{r}
+
+#umformung der daten: kursbeschreibung gibt thema, kursfach, in welchem fach das angeboten wurde, bundsland,
 
 d_kurs1 <- d %>% 
   pivot_longer(kursbeschreibung1.3D.:kursbeschreibung1.other., # fasse diese zusammen
@@ -403,17 +482,10 @@ d_kurs1 <- d %>%
                names_prefix = "kursbeschreibung1.", #lösch diesen prefix
                values_to = "kurs1ja", # ja oder nein in diese spalte
                values_drop_na = TRUE)%>% # lösch alle NA
-  filter(kurs1ja != "Nein" & kurs1ja != "N/A" & kurs1ja != "")%>% # filter auf die die "ja" haben
-  pivot_longer(Interesse.1:warumkurs1.other.,
-               names_to = "warum1",
-               values_to = "warum1ja",
-               values_drop_na = TRUE)%>%
-  filter(warum1ja == "Ja")
+  filter(kurs1ja != "Nein" & kurs1ja != "N/A" & kurs1ja != "")
 
-ggplot(data = d_kurs1)+
-  geom_bar(aes(x = kurs1, fill = warum1))+
-  coord_flip()
-
+#%>% # filter auf die die "ja" haben
+#  
 ```
 
 ```{r}
@@ -425,16 +497,10 @@ d_kurs2 <- d %>%
                names_prefix = "kursbeschreibung2.", #lösch diesen prefix
                values_to = "kurs2ja", # ja oder nein in diese spalte
                values_drop_na = TRUE)%>% # lösch alle NA
-  filter(kurs2ja != "Nein" & kurs2ja != "N/A" & kurs2ja != "")%>% # filter auf die die "ja" haben
-  pivot_longer(Interesse.2:warumkurs2.other.,
-               names_to = "warum2",
-               values_to = "warum2ja",
-               values_drop_na = TRUE)%>%
-  filter(warum2ja == "Ja")
+  filter(kurs2ja != "Nein" & kurs2ja != "N/A" & kurs2ja != "")
 
-ggplot(data = d_kurs2)+
-  geom_bar(aes(x = kurs2, fill = warum2))+
-  coord_flip()
+#%>% # filter auf die die "ja" haben
+
 
 ```
 
@@ -445,27 +511,21 @@ d_kurs3 <- d %>%
                names_prefix = "kursbeschreibung3.", #lösch diesen prefix
                values_to = "kurs3ja", # ja oder nein in diese spalte
                values_drop_na = TRUE)%>% # lösch alle NA
-  filter(kurs3ja != "Nein" & kurs3ja != "N/A" & kurs3ja != "")%>% # filter auf die die "ja" haben
-  pivot_longer(Interesse.3:warumkurs3.other.,
-               names_to = "warum3",
-               values_to = "warum3ja",
-               values_drop_na = TRUE)%>%
-  filter(warum3ja == "Ja")
+  filter(kurs3ja != "Nein" & kurs3ja != "N/A" & kurs3ja != "")
 
-ggplot(data = d_kurs3)+
-  geom_bar(aes(x = kurs3, fill = warum3))+
-  coord_flip()
+#%>% # filter auf die die "ja" haben
+
 ```
 
 ```{r}
-# Zusammmenfassung kurs 1-3
+# in langes Format umwandeln der kurs 1-3 nach FÄCHERN OHNE Grund!
 
 d_kurs1 <- d_kurs1 %>%
   rename(kurs_institution = kurs1,
          kursja = kurs1ja,
-         grund = warum1,
-         grundja = warum1ja,
-         fach = kursfach1,
+         #grund = warum1,
+         #grundja = warum1ja,
+         kursfach = kursfach1,
          fach.other = kursfach1.other.,
          bundesland = bundesland1,
          bundesland.other = bundesland1.other.,
@@ -477,9 +537,9 @@ d_kurs1 <- d_kurs1 %>%
 d_kurs2 <- d_kurs2 %>%
   rename(kurs_institution = kurs2,
          kursja = kurs2ja,
-         grund = warum2,
-         grundja = warum2ja,
-         fach = fach2,
+        # grund = warum2,
+        # grundja = warum2ja,
+         kursfach = fach2,
          fach.other = fach2.other.,
          bundesland = bundesland2,
          bundesland.other = bundesland2.other.,
@@ -491,9 +551,9 @@ d_kurs2 <- d_kurs2 %>%
 d_kurs3 <- d_kurs3 %>%
   rename(kurs_institution = kurs3,
          kursja = kurs3ja,
-         grund = warum3,
-         grundja = warum3ja,
-         fach = fach3,
+        # grund = warum3,
+        # grundja = warum3ja,
+         kursfach = fach3,
          fach.other = fach3.other.,
          bundesland = bundesland3,
          bundesland.other = bundesland3.other.,
@@ -512,59 +572,250 @@ d_kurs_inst <- rbind(
   subset(d_kurs2, select = common_cols),
   subset(d_kurs3, select = common_cols) )
 
-d_kurs_inst$grund <- gsub('.[0-9]+', '', d_kurs_inst$grund)
+d_kurs_inst$kurs_institution <- d_kurs_inst$kurs_institution %>%
+  recode( "3D." = "3D-modelling / 3D-scans / 3D-photogrammetrie",
+          "arch." = "Archiving",
+          "auszsprache." = "Markup language",
+          "bildbearb." = "Image manipulation",
+          "cad." = "CAD",
+          "datenb." = "Data bases",
+          "datenkur." = "Data curation",
+          "datensich." = "Data security",
+          "datenman." = "Data management",
+          "diged." = "Digital editions",
+          "digdatenausw." = "Digital data analysis",
+          "digdok." = "Digital documentation",
+          "digmetheor." = "Digital method and theory",
+          "digressour." = "Digitale ressources (e.g. ZENON, Arachne, ...)", 
+          "digverm." = "Digital survey",
+          "photogramm." = "Photogrammetrie",
+          "programmierung." = "Scripting languages and programming (R, Python, CSS)",
+          "tools." = "Software and tools",
+          "spatanal." = "Spatial analysis",
+          "stat." = "Statistics",
+          "textanal." = "Text analysis",
+          "onlineress." = "Online ressources",
+          "metad." = "Metadata", 
+          "wbtechn." = "Web technologies",
+          "gis." = "GIS / Web GIS",
+          "geophys." = "Geophysics",
+          "urheber." = "Copy right",
+          "other." = "other")
+
+# Original:
+    # 3D-Modellierung / 3D-Scans / 3D-Photogrammetrie
+    #Archivierung
+    #Auszeichnungssprachen
+    #Bildbearbeitung
+    #CAD
+    #Datenkuratierung
+    #Datenbanken
+    #Datensicherheit
+    #Datenmanagement
+    #Digitales Editieren
+    #Digitale Datenauswertung
+    #Digitale Dokumentation
+    #Digitale Methoden & Theorien
+    #Digitale Ressourcen (z. B. ZENON, Arachne, o.ä.)
+    #Digitale Vermessung
+    #Photogrammetrie
+    #Programmiersprachen (R, Python, CSS, …) und Programmierung
+    #Software und Tools
+    #Spatial Analysis
+    #Statistik
+    #Textanalyse
+    #Online-Ressourcen
+    #Metadaten
+    #Webtechnologien
+    #GIS / Web-Kartierung
+    #Geophysik
+    #Urheber*innenrecht
+    #Sonstiges: 
+
+# recode Fächerauswahl
+
+d_kurs_inst$kursfach <- d_kurs_inst$kursfach %>%
+  recode("Archäologie" = "Archaeology",
+         "Archäobiowissenschaften (-zoologie, -botanik, Dendrochronologie, physische Anthropologie u.ä.)" = "Archaeological Sciences",
+         "Archäoinformatik" = "Digital and Computational Archaeology",
+         "Architektur / Bauforschung" = "Architecture / Building research", 
+         "Geochemie" = "Geochemistry",
+         "Geodäsie / Vermessung" = "Geodesy / Surveying",
+         "Geographie" = "Geography",
+         "Geologie (u.a. Mineralogie, Petrologie, Paläontologie)" = "Geology", 
+         "Geschichtswissenschaften" = "History",
+         "Grabungstechnik" = "Excavation Techniques",
+         "Klimaforschung" = "Climate Research", 
+         "Konservierung / Restaurierung" = "Conversation / Restauration", 
+         "Kulturanthropologie / Ethnologie" = "Cultural Anthropology", 
+         "Kunstgeschichte" = "Art History", 
+         "MINT: aus dem Bereich d. Mathematik, Informatik, Naturwissenschaft oder Technik" = "STEM",
+         "Museumswissenschaften" = "Museum Studies", 
+         "Sonstiges" = "Other") 
+
+
 
 ```
-### all courses taken on institutions of repsondents
 
-#### looking at reason for attending
+Respondents were asked to give the details of up to three courses they already took. 
 
-```{r inst_kurse_grund}
-ggplot(data = d_kurs_inst)+
-  geom_bar(aes(x = kurs_institution, fill = grund))+
-  coord_flip()
-```
-
-
-#### looking at bundesland
-
-
-```{r inst_kurse_bund }
-ggplot(data = d_kurs_inst)+
-  geom_bar(aes(x = bundesland , fill = kurs_institution ))+
-  coord_flip()
-```
-
-Gibt es Unterschiede zwischen den Bundesländern?
-
-#### date of course taken
+### Which kind of topic was offered in which subject?
 
 ```{r}
 
-kurs_inst_jahr <- as.data.frame(table(d_kurs_inst$kursjahr, d_kurs_inst$bundesland))
-
-kurs_inst_jahr %>%
-  filter(!is.na(Var2) & Var2 != "")%>%
-ggplot(aes(x = Var1, col = Var2, y = Freq))+
-  geom_point() +
-  geom_line(aes(group = Var2))+
-  theme_minimal()+
-  labs(x = "Jahr", y = "Anzahl", title = "Anzahl Kurse mit FDM-Bezug pro Jahr")
-
-ggsave("../figures/first_draft_jahr_kurs.png", dpi = 300, units = "cm", height = 10)
-
-## notiz: das nicht anzahl kurse sondern anzahl themen in kursen!! 
+as.data.frame(table(d_kurs_inst$kursfach, d_kurs_inst$kurs_institution)) %>%
+  ggplot()+
+  geom_col(aes(x = reorder(Var2, Freq), y = Freq, fill = Var1))+
+  scale_fill_manual(values = c(n4o_farben, "#FFFFBB", "#A6AACC"),
+                    name = "Programme course was offered in")+
+  coord_flip()+
+  theme_minimal()
 ```
 
+As one can see, course with the topics databases, data manamgent and GIS were mentioned most often. The courses were often offered within an archaeology, digital and computational archaeology ("Archäoinformatik") or a digital humanities course. The Excavation technique, Geography and Museums studies programmes offer a significant number of topics as well.   
 
-4. Suchen sich Leute Kurse aus anderen Fächern oder nur in dem eigenen?
+### Study subject and course offered in
 
-5. Wie viele Kurse werden im Schnitt besucht?
+```{r}
+try <- kurse_intern  %>% 
+  filter(!is.na(fach)) %>% 
+  filter(!is.na(kursfach)) %>%
+  count(fach, kursfach) %>%
+  group_by(fach) 
 
-6. Warum werde Kurse besucht?
-  6a abhängig von studiertem Fach?
-  6b abhängig von Thema des Kurses?
-  
+ggplot(data = try, aes(x=kursfach, y=fach, fill=as.factor(n))) + 
+  geom_tile()+
+  labs(x = "Subject the course was offered in", y = "Main study subject")+
+  theme_minimal()+
+  scale_fill_manual(values = c(blues9[2:9], n4o_farben[1:2]),
+                    name = "number of courses")+
+    theme(axis.text.x = element_text(angle=45))
+
+```
+
+Do students choose courses from different programmes to learn digital skills and research data management? In this graph, the number of course students from the main study subject chose from another subject is shown. Obvious are the high number of archaeology students choosing courses in archaeology, but also in a number of different areas, such as Digital and Computational Archaeoloy, Digital Humanities and Grabungstechnik. In most cases though, only few courses from other subjects where chosen. Nonetheless, a certain interdisciplinarity can be observed.
+
+### Reasons to choose courses:
+
+When asked why the students took the course, the answer may dependent on the topic:
+
+```{r inst_kurse_grund}
+
+# alle gründe in einer Spalte sammeln
+ d_kurs_inst <- d_kurs_inst %>% 
+  pivot_longer(Interesse.1:warumkurs1.other.,
+               names_to = "warum1",
+               values_to = "warum1ja",
+               values_drop_na = TRUE)%>%
+  filter(warum1ja == "Ja")%>%
+  pivot_longer(Interesse.2:warumkurs2.other.,
+               names_to = "warum2",
+               values_to = "warum2ja",
+               values_drop_na = TRUE)%>%
+  filter(warum2ja == "Ja")%>%
+      pivot_longer(Interesse.3:warumkurs3.other.,
+               names_to = "warum3",
+               values_to = "warum3ja",
+               values_drop_na = TRUE)%>%
+  filter(warum3ja == "Ja")%>%
+  mutate(grund = coalesce(warum1, warum2, warum3))
+
+d_kurs_inst$grund <- gsub('[0-9]+', '', d_kurs_inst$grund)    
+
+as.data.frame(table(d_kurs_inst$grund, d_kurs_inst$kurs_institution)) %>%
+  ggplot()+
+  geom_col(aes(x = reorder(Var2, Freq), y = Freq, fill = Var1))+
+  labs(x = "Several mentions possible", 
+       y = "Topics of classes")+
+  scale_fill_manual(labels = c("Improves chances for job hunt",
+                               "Helpful for my own work",
+                               "Interest",
+                               "Mandatory course"),
+                      name = "Reasons for choosing course",
+                    values = n4o_farben[c(1,2,4,10)])+
+  coord_flip()+
+  theme_minimal()
+```
+
+Interestingly enough, the main reason to take a GIS course never seems to have been it being a mandatory class.
+... was kann man noch auswerten?
+
+
+or on the subject students study`
+
+```{r}
+d_g <- d %>%
+ pivot_longer(Interesse.1:warumkurs1.other.,
+               names_to = "warum1",
+               values_to = "warum1ja",
+               values_drop_na = TRUE)%>%
+  filter(warum1ja == "Ja")%>%
+  pivot_longer(Interesse.2:warumkurs2.other.,
+               names_to = "warum2",
+               values_to = "warum2ja",
+               values_drop_na = TRUE)%>%
+  filter(warum2ja == "Ja")%>%
+      pivot_longer(Interesse.3:warumkurs3.other.,
+               names_to = "warum3",
+               values_to = "warum3ja",
+               values_drop_na = TRUE)%>%
+  filter(warum3ja == "Ja")%>%
+  mutate(grund = coalesce(warum1, warum2, warum3))
+
+d_g$grund <- gsub('[0-9]+', '', d_g$grund)    
+
+```
+
+```{r}
+
+
+as.data.frame(table(d_g$grund, d_g$fach)) %>%
+  ggplot()+
+  geom_col(aes(x = reorder(Var2, Freq), y = Freq, fill = Var1))+
+  labs(y = "Several mentions possible", 
+       x = "Subject studied")+
+  scale_fill_manual(labels = c("Improves chances for job hunt",
+                               "Helpful for my own work",
+                               "Interest",
+                               "Mandatory course"),
+                      name = "Reasons for choosing course",
+                    values = n4o_farben[c(1,2,4,10)])+
+  coord_flip()+
+  theme_minimal()
+
+
+```
+
+-- kann m.E. raus.
+
+## How did students evaluate course quality?
+
+
+```{r}
+kurse_intern %>%
+  pivot_longer(kursquali1:kursquali2,
+               names_to = "quali_frage",
+               values_to = "kursquali") %>%
+  filter(!is.na(kursquali))%>%
+ggplot(aes(x = as.factor(kursquali), fill = quali_frage))+
+geom_bar(na.rm = TRUE, position = position_dodge())+
+  labs(title = "Quality assessment of the courses",
+       x= "blue: 1 - very bad to 10 - very good) \n grey: 1 - I didn't learn anything to 10 - I am confident in the learned skills")+
+  scale_fill_manual(values = n4o_farben[c(1,10)],
+                    labels = c("Quality of course", "Learn effect"),
+                    name = "Assessment")+
+  theme_minimal()
+
+```
+
+How much students and trainees perceive to have learned correlates obviously with their assessment of the quality of the course. All in all, most students and trainees evaluated most courses to be good and very good. 
+
+Nonetheless, there is a rather geowing variance the better the course was perceived to be. Even though the course had been of very good quality, they don't feel comfortable applying the techniques. The best learn effect students had whit courses they say was "good", 8 of 10 points, after this it turns. Here it may be, that students value courses with a higher content density as being "better", but this large amount of input made them feel more insecure in their own skills or they didn't have enough time to practice.
+
+
+# How do students and trainees deal with data
+
+
 7. Umgang mit Daten?
   7a Such- und Findeverhalten, 
   7b Welche back-up Strategien werden benutzt
