@@ -73,11 +73,13 @@ We were especially interested in what kind of courses on research data managemen
 
 ```{r data}
 
-d <- read.csv2("../data/raw_data/20201210_results-survey553894.csv", sep = ",", encoding = "UTF-8")
+d <- read.csv2("../data/raw_data/2020-12-18_18-35_results-survey553894.csv", sep = ",", encoding = "UTF-8")
 
 library(tidyr)
 library(dplyr)
 library(tidyverse)
+
+# mehrfachauswahl bei fächer -- bedenken
 
 d <- d %>%
   rename(Archaeologie = studienfach.SQ001.,
@@ -160,10 +162,11 @@ faecher$fach <- ifelse(faecher$fach == "studienfach.other.", faecher$ja, faecher
 
 ```{r, faecher_all, eval = FALSE}
 
+# übersicht über alle Fächer, die angegeben wurden erstellen:
 
 tab_fach <- as.data.frame(table(faecher$fach))
 
-write.csv2(tab_fach, "../data/derived_data/faecheraufstellung.csv", fileEncoding = "UTF-8")
+write.csv2(tab_fach, "../data/derived_data/faecheraufstellung_2020-12-18.csv", fileEncoding = "UTF-8")
 
 
 
@@ -182,10 +185,12 @@ write.csv2(tab_fach, "../data/derived_data/faecheraufstellung.csv", fileEncoding
 
 # Liste der Fächer, die wir bei uns sehen:
 
-community <- c("Archaeologie", "Digital.Humanities", "Digital Humanities", "Museumswissenschaften", "Anthropologie", "Grabungstechnik", "Architektur.Bauforschung", "Geographie", "Ägyptologie", "Ethnologie", "Restaurierung", "Denkmalpflege", "Archäoinformatik", "wissenschaftliche Ausstellungserarbeitung", "Angewandte Informatik", "Bibliotheks- und Informationwissenschaft",  "Kulturanthropologie", "Klimaforschung", "Numismatik", "Geophysik", "Antike Kulturen Vorderasiens und Ägyptens ", "Antike Kulturen Ägyptens und Vorderasiens ", "Bibliotheksreferendariat", "Prähistorische und Historische Archäologie", "Digitale Denkmaltechnologien (Baufoschung, MINT, Bauingenieurwesen, Heritage,...)", "Altamerikanistik/ Ethnologie", "Altertumswissenschaften", "Ethnologie und Erziehungswissenschaften", "Bibliothekswissenschaft", "Bibliotheksreferendariat mit Master Bibliotheks- und Informationswissenschaft", "Informationswissenschaften", "Informationsmanagement", "Organische Residuenanalysen")
+community <- c("Archaeologie", "Digital.Humanities", "Digital Humanities", "Museumswissenschaften", "Anthropologie", "Grabungstechnik", "Architektur.Bauforschung", "Geographie", "Ägyptologie", "Ägyptologie ", "Ethnologie", "Restaurierung", "Konservierung", "Denkmalpflege", "Archäoinformatik", "wissenschaftliche Ausstellungserarbeitung", "Angewandte Informatik", "Bibliotheks- und Informationwissenschaft", "Bibliotheks- und Informationswissenschaft", "Kulturanthropologie", "Klimaforschung", "Numismatik", "Geophysik", "Antike Kulturen Vorderasiens und Ägyptens ", "Antike Kulturen Ägyptens und Vorderasiens ",  "Prähistorische und Historische Archäologie", "Digitale Denkmaltechnologien (Baufoschung, MINT, Bauingenieurwesen, Heritage,...)", "Altamerikanistik/ Ethnologie", "Altertumswissenschaften", "Ethnologie und Erziehungswissenschaften", "Bibliothekswissenschaft", "Bibliotheks- Informationswissenschaft", "Bibliotheksreferendariat mit Master Bibliotheks- und Informationswissenschaft", "Bibliotheksreferendariat", "Bibliothekswissenschaften", "Bibliothekswissenschaft", "Informationswissenschaften", "Informationswissenschaft", "Informationsmanagement", "Organische Residuenanalysen")
 
-
+# das subsetten
 d <- subset(faecher, faecher$fach %in% community)
+
+# vereinheitlichen:
 
 d$fach[d$fach == "Antike Kulturen Vorderasiens und Ägyptens "] <- "Antike Kulturen Ägyptens und Vorderasiens "
 
@@ -193,15 +198,36 @@ d$fach[d$fach == "Bibliotheksreferendariat mit Master Bibliotheks- und Informati
 
 d$fach[d$fach == "Bibliotheks- und Informationswissenschaft" ] <- "Bibliotheks- und Informationswissenschaft"
 d$fach[d$fach == "Bibliotheks- und Informationwissenschaft" ] <- "Bibliotheks- und Informationswissenschaft"
+d$fach[d$fach == "Bibliotheks- Informationwissenschaft" ] <- "Bibliotheks- und Informationswissenschaft"
+
 d$fach[d$fach == "Bibliotheksreferendariat" ] <- "Bibliotheks- und Informationswissenschaft"
 d$fach[d$fach == "Bibliothekswissenschaft" ] <- "Bibliotheks- und Informationswissenschaft"
+d$fach[d$fach == "Bibliothekswissenschaften" ] <- "Bibliotheks- und Informationswissenschaft"
+
 
 d$fach[d$fach == "Informationswissenschaft" ] <- "Bibliotheks- und Informationswissenschaft"
 d$fach[d$fach == "Informationswissenschaften" ] <- "Bibliotheks- und Informationswissenschaft"
 
+# name zu lang
+d$fach[d$fach == "Digitale Denkmaltechnologien (Baufoschung, MINT, Bauingenieurwesen, Heritage,...)" ] <- "Digitale Denkmaltechnologien"
+
+d$fach[d$fach == "Konservierung" ] <- "Konservierung/Restaurierung"
+d$fach[d$fach == "Restaurierung" ] <- "Konservierung/Restaurierung"
+
+
+
 ethn <- c("Ethnologie", "Kulturanthropologie", "Altamerikanistik/ Ethnologie", "Ethnologie und Erziehungswissenschaften")
 
 d$fach[d$fach %in% ethn] <- "Ethnologie/Kulturanthropologie"
+
+arch <-  c("Archaeologie", "Prähistorische und Historische Archäologie")
+
+atw <-  c("Ägyptologie", "Ägyptologie ", "Numismatik", "Antike Kulturen Ägyptens und Vorderasiens ")
+
+d$fach[d$fach %in% atw] <- "Altertumswissenschaften"
+
+
+d$fach[d$fach %in% arch ] <- "Archaeologie"
 
 tab_fach <- as.data.frame(table(d$fach))
 
@@ -288,7 +314,7 @@ ggplot(data = ausb_inst, aes(x = reorder(Var2, Freq), y = Freq))+
   coord_flip()+
   theme_minimal()
 
-#+
+# versuche des labelns der balkenteile mit anzahl...
 #  geom_text(aes(x = ausb_inst$Var2,
 #                y = cumsum(ausb_inst$Freq)),# hjust = 0.5,
 #            label = ifelse(ausb_inst$Freq > 0, ausb_inst$Freq, ""))
@@ -416,12 +442,36 @@ colnames(d_kurs3) <-  cnames
 
 kurse_intern <-  rbind(d_kurs1, d_kurs2, d_kurs3)
 
+kurse_intern$kursfach <- kurse_intern$kursfach %>%
+  recode("Archäologie" = "Archaeology",
+         "Archäobiowissenschaften (-zoologie, -botanik, Dendrochronologie, physische Anthropologie u.ä.)" = "Archaeological Sciences",
+         "Archäoinformatik" = "Digital and Computational Archaeology",
+         "Architektur / Bauforschung" = "Architecture / Building research", 
+         "Geochemie" = "Geochemistry",
+         "Geodäsie / Vermessung" = "Geodesy / Surveying",
+         "Geographie" = "Geography",
+         "Geologie (u.a. Mineralogie, Petrologie, Paläontologie)" = "Geology", 
+         "Geschichtswissenschaften" = "History",
+         "Grabungstechnik" = "Excavation Techniques",
+         "Klimaforschung" = "Climate Research", 
+         "Konservierung / Restaurierung" = "Conversation / Restauration", 
+         "Kulturanthropologie / Ethnologie" = "Cultural Anthropology", 
+         "Kunstgeschichte" = "Art History", 
+         "MINT: aus dem Bereich d. Mathematik, Informatik, Naturwissenschaft oder Technik" = "STEM",
+         "Museumswissenschaften" = "Museum Studies", 
+         "Sonstiges" = "Other") 
+
 ```
 
 
 ## looking at Bundesland
 
 ```{r inst_kurse_bund }
+#kurse_intern%>%
+#  filter(!is.na(bundesland.sonst))%>%
+#  print(bundesland.sonst)
+# noch hübsch machen
+
 kurse_intern %>%
   filter(!is.na(bundesland)) %>%
   group_by(bundesland) %>%
@@ -432,6 +482,7 @@ ggplot()+
   geom_text(aes(x = 1, y = 80, label = paste("n = ", nrow(kurse_intern))))+
   coord_flip()+
   theme_minimal()
+
 ```
 
 Looking at in which Land in Germany most respondents did their courses, it is easy to see, that NRW has by far the largest amount of courses, that were taken. NRW is a popolous Land and therefore it is not surpriseing a large number of respondents should study and learn there. It also hosts two universities with courses on digital and computational archaeology integrated into the curriculum (Cologne and Bonn).
@@ -456,7 +507,7 @@ ggplot(aes(x = Var1, col = Var2, y = Freq))+
   geom_point() +
   geom_line(aes(group = Var2))+
   theme_minimal()+
-  scale_colour_manual(values = n4o_farben[1:8])+
+  scale_colour_manual(values = n4o_farben[1:9])+
   labs(x = "Year", 
        y = "Amount", 
        col = "Bundesland \nwith more than 8 courses",
@@ -687,7 +738,7 @@ ggplot(data = try, aes(x=kursfach, y=fach, fill=as.factor(n))) +
   geom_tile()+
   labs(x = "Subject the course was offered in", y = "Main study subject")+
   theme_minimal()+
-  scale_fill_manual(values = c(blues9[2:9], n4o_farben[1:2]),
+  scale_fill_manual(values = c(blues9[2:9], n4o_farben[1:3]),
                     name = "number of courses")+
     theme(axis.text.x = element_text(angle=45))
 
@@ -804,7 +855,7 @@ geom_bar(na.rm = TRUE, position = position_dodge())+
   scale_fill_manual(values = n4o_farben[c(1,10)],
                     labels = c("Quality of course", "Learn effect"),
                     name = "Assessment")+
-  geom_text(aes(x = 1, y = 50, label = paste("n = ", (nrow(kurse_intern)/2 ))))+
+  #geom_text(aes(x = 1, y = 50, label = paste("n = ", (nrow(kurse_intern)/2 ))))+ fehler drin
   theme_minimal()
 
 ```
@@ -845,8 +896,6 @@ Haben Sie sich selbständig und autodidaktisch zu Themen des Datenmanagements fo
 
 ```{r}
 
-library(magrittr)
-
 d$autodidakt <- factor(d$autodidakt, level = c("Ja", "Nein", "N/A"))
 ggplot()+
 geom_bar( aes(x = d$autodidakt), fill = n4o_farben[1])+
@@ -877,12 +926,14 @@ d %>%
                            "Arbeit (HiWi)" = "Arbeitserfahrung",
                            "im früheren Arbeitsbild " = "Arbeitserfahrung",
                            "Tagung" = "Tagungen",
+                           "Tagungsteilnahmen" = "Tagungen",
                            "CAA Deutschland Tagung" = "Tagungen",
                            "Kolloquien mit anderen Studierenden" = "Tagungen",
                            "Suche nach statistischen Methodiken im Internet" = "autodidaktwie.online.",
                            "Skripten von Lehrveranstaltungen" = "autodidaktwie.LB.",
                            "praktisch durch Praxisanteil im Bibliotheksreferendariat an einer Universitätsbibliothek" = "Arbeitserfahrung",
                            "Learning by doing" = "unspezifisch",
+                           "Google" = "unspezifisch",
                            "Selbst aktiv Kurse gesucht und besucht." = "unspezifisch",
                            "Museum Digital" = "autodidaktwie.online."))
 d_a %>%
@@ -895,7 +946,7 @@ d_a %>%
             show.legend=FALSE)+
   scale_x_discrete(breaks = c("autodidaktwie.bek." , "autodidaktwie.LB.", "autodidaktwie.online.", "autodidaktwie.YT.", "Arbeitserfahrung", "Tagungen"),
                  labels = c("acquaintances", "books & learning materials", "online manuals and materials", "YouTube (or similar)", "at work", "at conferences"))+
-  scale_fill_manual(values = n4o_farben[1:6])+
+  scale_fill_manual(values = n4o_farben[1:8])+
   labs(x = "", 
        y = "count (several mentions possible)",
        title = "Ways respondents learn about RDM on their own")+
@@ -1141,7 +1192,7 @@ d %>%
 ggplot()+
   geom_col(aes(x = reorder(software, Count), y = Count))+
   labs(x = "most often used software",
-       y = "Count (more than twice)")
+       y = "Count (more than twice)")+
   coord_flip()
 ```
 
@@ -1353,6 +1404,8 @@ A number of students use E-mails for backup ( `r length(grep("mail", tolower(d$b
 
 
 ### Richtlinen bekannt?
+
+todo: here ist ein fehler drin
 
 These "Richtlinien" are known to students: `r  d$richtliniendateien1 `, most, though (`r sum(d$richtliniendateien == "Nein") `) did not know any guidelines.
 
