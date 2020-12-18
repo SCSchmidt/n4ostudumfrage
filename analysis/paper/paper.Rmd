@@ -1019,8 +1019,6 @@ There are several topics people looking for advanced training in Research Data M
 
 Are there certain hubs, where people look for training? We are aware that these answers need to be taken cautiously: The number of people taking further training is too small to be fully representative. 
 
-
-
 ```{r}
 d  %>% 
   pivot_longer(c(extkurswo, extkurswo2, extkurswo3),
@@ -1086,6 +1084,7 @@ ggplot()+
 ```
 
 
+
 # How do students and trainees deal with data and software
 
 ```{r}
@@ -1102,6 +1101,7 @@ d %>%
   mutate(software = na_if(software, "C")) %>%
   mutate(software = na_if(software, "D")) %>%
   mutate(software = coalesce(software, software_ja))%>%
+  filter(software != " ") %>%
   mutate(software = recode(software,
                          "softwarehaeufig.A1."  = "Excel",
                          "softwarehaeufig.A2."  = "QGIS",
@@ -1140,19 +1140,314 @@ d %>%
   filter(Count > 2)%>%
 ggplot()+
   geom_col(aes(x = reorder(software, Count), y = Count))+
+  labs(x = "most often used software",
+       y = "Count (more than twice)")
   coord_flip()
 ```
 
-7. Umgang mit Daten?
-  7a Such- und Findeverhalten, 
-  7b Welche back-up Strategien werden benutzt
+Comparable to first survey.
+
+### most often used data formats
+
+```{r}
+d_d <- d %>%
+  pivot_longer(dateiformatproduzien.A1.:dateiformatproduzien.A15.,
+               names_to = "dateiformat",
+               values_to = "dateiformat_ja",
+               values_drop_na = TRUE) %>%
+  filter(dateiformat_ja == "Ja") %>%
+  mutate(dateiformat = recode(dateiformat,
+                           "dateiformatproduzien.A1." = "xls/xlsx",
+                           "dateiformatproduzien.A2." = "doc/docx",
+                           "dateiformatproduzien.A3." = "pdf", 
+                           "dateiformatproduzien.A4." = "ppt/pptx",
+                           "dateiformatproduzien.A5." = "ods",
+                           "dateiformatproduzien.A6." = "csv",
+                           "dateiformatproduzien.A7." = "odt",
+                           "dateiformatproduzien.A8."= "png",
+                           "dateiformatproduzien.A9." = "jpg",
+                           "dateiformatproduzien.A10." = "tiff",
+                           "dateiformatproduzien.A11." = "geotiff",
+                           "dateiformatproduzien.A12." = "geojson",
+                           "dateiformatproduzien.A13." =  "shp",
+                           "dateiformatproduzien.A14." = "json",
+                           "dateiformatproduzien.A15." = "xml"))%>%
+  group_by(dateiformat)%>%
+  summarise(Count = n())%>%
+  filter(Count > 2)
 
 
-10. Warum werden Kurse nicht besucht?
+
+library("tm")
+library("SnowballC")
+
+d$dateiformatproduzien.other. <- gsub("/", " , ", d$dateiformatproduzien.other.)
+docs <- Corpus(VectorSource(d$dateiformatproduzien.other.))
+
+#inspect(docs)
+
+# alles kleinschreiben
+docs <- tm_map(docs, content_transformer(tolower))
+# Remove punctuations
+docs <- tm_map(docs, removePunctuation)
+# Eliminate extra white spaces
+#docs <- tm_map(docs, stripWhitespace)
+
+
+dtm <- TermDocumentMatrix(docs)
+m <- as.matrix(dtm)
+v <- sort(rowSums(m),decreasing=TRUE)
+d_docs <- data.frame(dateiformat = names(v),Count=v)%>%
+  filter(Count > 2) 
+
+dd <-  data.frame(d_d$dateiformat, d_d$Count)
+colnames(dd)  <- c("dateiformat", "Count")
+d_d2 <- rbind(d_docs, dd)
+
+ggplot(data = d_d2)+
+  geom_col(aes(x = reorder(dateiformat, Count), y = Count))+
+  labs(x = "most often used dateiformat",
+       y = "Count (more than twice)")+
+  coord_flip()
+
+  #  pyrhtml??
+  
+``` 
+
+## data formats that are not known
+  
+```{r}
+d %>%
+  pivot_longer(dateiformatunbekannt.A1.:dateiformatunbekannt.A15.,
+               names_to = "dateiformatu",
+               values_to = "dateiformatu_ja",
+               values_drop_na = TRUE) %>%
+  filter(dateiformatu_ja == "Ja") %>%
+  mutate(dateiformatu = recode(dateiformatu,
+                           "dateiformatunbekannt.A1." = "xls/xlsx",
+                           "dateiformatunbekannt.A2." = "doc/docx",
+                           "dateiformatunbekannt.A3." = "pdf", 
+                           "dateiformatunbekannt.A4." = "ppt/pptx",
+                           "dateiformatunbekannt.A5." = "ods",
+                           "dateiformatunbekannt.A6." = "csv",
+                           "dateiformatunbekannt.A7." = "odt",
+                           "dateiformatunbekannt.A8."= "png",
+                           "dateiformatunbekannt.A9." = "jpg",
+                           "dateiformatunbekannt.A10." = "tiff",
+                           "dateiformatunbekannt.A11." = "geotiff",
+                           "dateiformatunbekannt.A12." = "geojson",
+                           "dateiformatunbekannt.A13." =  "shp",
+                           "dateiformatunbekannt.A14." = "json",
+                           "dateiformatunbekannt.A15." = "xml"))%>%
+  group_by(dateiformatu)%>%
+  summarise(Count = n())%>%
+  filter(Count > 2)%>%
+ggplot()+
+  geom_col(aes(x = reorder(dateiformatu, Count), y = Count))+
+  labs(x = "unknown dataformats",
+       y = "Count (more than twice)")+
+  coord_flip()
+
+```
+
+Äh. Sagt uns eher nischt oder?
+
+## How do ppl manage their own data?
+
+### Als wie geübt schätzen Sie sich im Umgang mit Ihren Dokumenten und Daten ein? 1: sehr unsicher bis 10: sehr sicher 
+
+
+```{r}
+ggplot()+
+  geom_bar(aes(d$umgangdaten.SQ001.))+
+  geom_text(aes(x = 1, y = 50, label = paste("N/A =", sum(is.na(d$umgangdaten.SQ001.)) )))
+```
+
+### Für wie wichtig halten Sie einen professionellen Umgang mit Dateien? 1: unwichtig bis 10: sehr wichtig 
+```{r}
+ggplot()+
+  geom_bar(aes(d$wichtigdateien.SQ001.))+
+  geom_text(aes(x = 1, y = 50, label = paste("N/A =", sum(is.na(d$wichtigdateien.SQ001.)) )))
+
+```
+
+###Wie finden Sie Ihre Dokumente und Dateien auf Ihrem Rechner?
+Bitte wählen Sie eine der folgenden Antworten:
+
+    meistens mit Hilfe der Suchfunktion
+    meistens über meine eigene Ordnerstruktur
+
+```{r}
+ggplot()+
+  geom_bar(aes(d$findendateien))+
+  geom_text(aes(x = 1, y = 50, label = paste("N/A =", sum(is.na(d$findendateien)) )))+
+  coord_flip()
+
+```
+
+
+    Sonstiges: -- eigentlich nur 4x "beides"
+
+
+
+### Haben Sie auf Ihrem Rechner eine dem/n Arbeitsziel(en) angepasste Ordnerstruktur konzipiert und angelegt?
+
+`r sum(d$rechnerfolderstruct == "Nein")` x Nein.
+
+### Legen Sie verschiedene Versionen Ihrer Dokumenten und Dateien an?
+
+`r sum(d$dateiversionen == "nein")` x Nein.
+
+```{r}
+ggplot()+
+  geom_bar(aes(d$dateiversionen))+
+  coord_flip()
+
+```
++ 4x Ordnerstruktur nach Version und Dat
+
+### Backupstrategien
+
+```{r}
+d %>%
+  pivot_longer(backupstrategie2.SQ001.:backupstrategie2.SQ006.,
+               names_to = "backup",
+               values_to = "backup_ja",
+               values_drop_na = TRUE) %>%
+  filter(backup_ja == "Ja") %>%
+  mutate(backup = recode(backup,
+                          "backupstrategie2.SQ001." = "Externe Festplatte",
+                         "backupstrategie2.SQ002." =  "USB",
+                          "backupstrategie2.SQ003." = "CD/DVD",
+                          "backupstrategie2.SQ004." = "private Cloud-Lösung",
+                          "backupstrategie2.SQ005." = "institutionelle Cloud-Lösung",
+                          "backupstrategie2.SQ006." = "Versionierungssystem")) %>%
+  group_by(backup) %>%
+  summarise(Count = n())%>%
+  filter(Count > 2)%>%
+ggplot()+
+  geom_col(aes(x = reorder(backup, Count), y = Count))+
+  labs(x = "Backupstrategien",
+       y = "Count (more than twice)")+
+  coord_flip()
+
+```
+
+```{r eval =FALSE}
+d %>%
+  filter(backupstrategie2.other. !="NA")%>%
+  ggplot()+
+  geom_bar(aes(x = backupstrategie2.other.))+
+  coord_flip()
+  
+```
+
+A number of students use E-mails for backup ( `r length(grep("mail", tolower(d$backupstrategie2.other.)))` students), whereas others (( `r length(grep("server", tolower(d$backupstrategie2.other.)))` students) use servers offered by the institutions.
+(Rest vernachlässigbar)  
+
+`r sum(d$angstdatenverlust == "ja", na.rm=TRUE) ` are afraid of losing data.
+
+`r sum(d$angstdatenverlust == "nein", na.rm=TRUE)` are not afraid of losing data.
+
+`r  sum(d$angstdatenverlust == "dazu habe ich mir bisher keine Gedanken gemacht", na.rm=TRUE)` haven't thought about the topic yet  (NA = `r sum(is.na(d$angstdatenverlust)) `).
+
+
+### Richtlinen bekannt?
+
+These "Richtlinien" are known to students: `r  d$richtliniendateien1 `, most, though (`r sum(d$richtliniendateien == "Nein") `) did not know any guidelines.
+
+### Metadata?
+
+```{r}
+d %>%
+  ggplot()+
+  geom_bar(aes(x = metadaten))+
+  coord_flip()
+
+```
+
+```{r}
+d %>%
+  ggplot()+
+  geom_bar(aes(x = nfdi))+
+  coord_flip()
+```
+
+shows : survey = advertisement.
+
+## IT affinity
+
+```{r}
+d %>%
+  ggplot()+
+  geom_bar(aes(x = itaffinitaet.SQ001.))+
+  coord_flip()
+```
+
 
 11. Hängen Besuch von Kursen und Fortbildungen, Richtlinien zu FDM sowie Wissen um NFDI und Metadaten von ITAffinität ab? 
 
-12. In welchem Bereich bestehen Wünsche zu Fortbildung?
+
+
+`r sum(d$fortbildung == "Nein", na.rm=TRUE)` did not wish for further training. Others, though, `r sum(d$fortbildung == "Ja", na.rm=TRUE)` respondents to be exact, did.
+
+
+### 12. In welchem Bereich bestehen Wünsche zu Fortbildung?
+
+```{r}
+
+d_fb <- d %>% 
+  pivot_longer(c(fortbildung1.3D.:fortbildung1.other.), # fasse diese zusammen
+               names_to = "fortbildung_them", # in dieser neuen spalte 
+               names_prefix = "fortbildung1.", #lösch diesen prefix
+               values_to = "fortbildung_ja", # ja oder nein in diese spalte
+               values_drop_na = TRUE)%>% # lösch alle NA
+  filter(fortbildung_ja == "Ja")%>%
+  mutate(fortbildung_them = recode(fortbildung_them ,
+          "3D." = "3D-modelling / 3D-scans / 3D-photogrammetrie",
+          "arch." = "Archiving",
+          "3D1." = "Markup language",  # ja, ab hier sind die codes anders als in den anderen Themenbeschreibungen.            
+          "3D2." = "Image manipulation",
+          "3D3." = "CAD",
+          "3D4." = "Data curation",
+          "3D5." = "Data bases",
+          "3D6." = "Data security",
+          "3D7." = "Data management",
+          "3D8." = "Digital editions",
+          "3D9." = "Digital data analysis",
+          "3D10." = "Digital documentation",
+          "3D11." = "Digital method and theory",
+          "3D12." = "Digitale ressources (e.g. ZENON, Arachne, ...)", 
+          "3D13." = "Digital survey",
+          "3D14." = "Photogrammetrie",
+          "3D15." = "Scripting languages (R, Python)",
+          "3D27." = "programming languages (JAVA, C++)", 
+          "3D16." = "Software and tools",
+          "3D17." = "Spatial analysis",
+          "3D18." = "Statistics",
+          "3D19." = "Text analysis",
+          "3D20." = "Programming, Software Engineering",
+          "3D21." = "Online ressources", 
+          "3D22." = "Metadata",
+          "3D23." = "Web technologies",
+          "3D24." = "GIS / Web GIS",
+          "3D25." = "Geophysics",
+          "3D26." = "Copy right"))
+
+d_fb %>%
+  group_by(fortbildung_them)%>%
+  summarise(Count = n())%>%
+  ggplot()+
+  geom_col(aes(x = reorder(fortbildung_them, Count), y = Count))+
+  coord_flip()
+```
+
+sonstiges: 
+"Ich würde gern mehr kennen, habe aber keine Zeit, mich einzuarbeiten"
+[31] "Machine Learning"                                                    
+[32] "Past"                                                                
+[33] "Videobearbeitung"                                                    
+[34] "Vielleicht ein wenig von allem " 
 
 \newpage
 
