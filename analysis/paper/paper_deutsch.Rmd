@@ -32,8 +32,6 @@ output:
       reference_docx: "../templates/template.docx" # Insert path for the DOCX file
 bibliography: references.bib
 csl: "../templates/journal-of-archaeological-science.csl" # Insert path for the bib-style
-abstract: |
-  Text of abstract
 keywords: |
   NFDI, Umfrage, Ergebnisse, Forschungsdatenmanagement
 highlights: |
@@ -54,15 +52,20 @@ knitr::opts_chunk$set(
   echo = FALSE,
   comment = "#>",
   fig.path = "../figures/",
-  dpi = 300
+  dpi = 300,
+  fig.width = 10 
 )
 
+
+```
+
+
+```{r packages}
 library(tidyr)
 library(dplyr)
 library(tidyverse)
 
 ```
-
 
 # Einleitung
 
@@ -382,12 +385,12 @@ g_a$Var2  <-  droplevels(g_a$Var2)
 
 g_a <- xtabs(Freq ~ Var1 + Var2, g_a) # zurück in eine Tabelle
 
-library(lsr)
-cramersV(g_a)
+#library(lsr)
+#cramersV(g_a)
 
-library(kableExtra)
-g_a  %>%
-  kable()
+#library(kableExtra)
+#g_a  %>%
+#  kable()
 
 ```
 
@@ -1258,7 +1261,7 @@ e  %>%
   summarise(count = n())%>%
   ggplot()+
   geom_col(aes(x = reorder(extwo, count), y = count, fill = art_ext))+
-  scale_y_continuous(breaks = c(2,4,6,8))+
+  scale_y_continuous(breaks = c(2,4,6,8,10,12))+
   scale_fill_manual(values = n4o_farben[c(1:5,7)],
                     name = "Art der Fortbildung")+
   labs (x = "")+
@@ -1443,11 +1446,11 @@ rl <- read.csv("../data/derived_data/richtlinien.csv", sep = ",", encoding = "UT
 
 ```
 
-`r sum(rl$FAIR, na.rm = TRUE)` Leute nenne die FAIR-Prinzipien.
+`r sum(rl$FAIR, na.rm = TRUE)` Leute nennen die FAIR-Prinzipien.
 
-`r sum(rl$IANUS, na.rm = TRUE)` Leute nenne die IANUS-IT-Empfehlungen.
+`r sum(rl$IANUS, na.rm = TRUE)` Leute nennen die IANUS-IT-Empfehlungen.
 
-`r sum(rl$drei_zwei_eins, na.rm = TRUE)` Leute nenne die 3-2-1-Back-Up-Strategien.
+`r sum(rl$drei_zwei_eins, na.rm = TRUE)` Leute nennen die 3-2-1-Back-Up-Strategien.
 
 Weitere spezifische Richtlinen die genannt werden:
 
