@@ -1,0 +1,1558 @@
+---
+title: "Vorläufige Auswertung der NFDI4Objects-Umfrage: Datenmanagement in der Ausbildung"
+author:
+  - Sophie C. Schmidt:
+      email: sophie.schmidt@dainst.de
+      institute: [DAI]
+      correspondence: true
+  - Christin Keller:
+      email: christin.keller@dainst.de
+      institute: [DAI]
+      correspondence: false
+  - Louise Rokohl:
+      email: rokohl@rgzm.de
+      institute: [RGZM]
+      correspondence: false
+  - Florian Thiery:
+      email: thiery@rgzm.de
+      institute: [RGZM]
+      correspondence: false
+  - Henrike Backhaus:
+      email: henrike.backhaus@hs-mainz.de
+      institute: [HSM]
+      correspondence: false 
+institute:
+  - DAI: Deutsches Archäologisches Institut
+  - RGZM: Römisch-Germanisches Zentralmuseum Mainz
+  - HSM: Hochschule Mainz
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+    bookdown::word_document2:
+      fig_caption: yes
+      reference_docx: "../templates/template.docx" # Insert path for the DOCX file
+bibliography: references.bib
+csl: "../templates/journal-of-archaeological-science.csl" # Insert path for the bib-style
+abstract: |
+  Text of abstract
+keywords: |
+  NFDI, Umfrage, Ergebnisse, Forschungsdatenmanagement
+highlights: |
+  Forschungsdatenmanagement fehlt in der Ausbildung; wenige nehmen an Kursen außerhalb der eigenen Institution teil; viele wünschen sich mehr Kurse 
+---
+
+Keywords: `r rmarkdown::metadata$keywords`
+
+Highlights: `r rmarkdown::metadata$highlights`
+
+<!-- The following code chunk defines some general settings how code chunks should behave. -->
+
+```{r setup, echo = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  echo = FALSE,
+  comment = "#>",
+  fig.path = "../figures/",
+  dpi = 300
+)
+
+library(tidyr)
+library(dplyr)
+library(tidyverse)
+
+```
+
+
+# Einleitung
+
+In dieser Zusammenfassung werden die Ergebnisse der Umfrage von NFDI4Objects für Auszubildende, Studiernde, Volontäre und Fortzubildende zusammengefasst.
+
+1. Community: Beschreibung der Zusammensetzung
+
+2. Welche Kursangebote werden wahrgenommen
+
+3. Wünsche, Bedarfe
+
+# NFDI4Objects-Gemeinschaft
+
+```{r data, eval = FALSE}
+
+# laden des originaldatensatzes
+d <- read.csv2("../data/raw_data/2020-12-18_18-35_results-survey553894.csv", sep = ",", encoding = "UTF-8")
+
+# mehrfachauswahl bei fächer -- bedenken
+
+d <- d %>%
+  rename(Archäologie = studienfach.SQ001.,
+        Anthropologie = studienfach.SQ002.,
+        Archaeozoologie =  studienfach.SQ003.,
+        Archaeobotanik =  studienfach.SQ004.,
+        Architektur.Bauforschung =  studienfach.SQ005.,
+        DigitalHumanities = studienfach.SQ006.,
+        Geschichtswissenschaften = studienfach.SQ007.,
+        Grabungstechnik = studienfach.SQ008.,
+        Klimaforschung = studienfach.SQ009.,
+        Konservierung = studienfach.SQ010.,
+        Kunstgeschichte =  studienfach.SQ011.,
+        Linguistik.Philologie = studienfach.SQ012.,
+        MINT = studienfach.SQ013.,
+        Museumswissenschaften = studienfach.SQ014.,
+        Musikwissenschaften = studienfach.SQ015.,
+        Geochemie = studienfach.SQ016.,
+        Geologie = studienfach.SQ017.,
+        Geographie = studienfach.SQ018.,
+        Restaurierung = studienfach.SQ019.)
+
+
+
+
+d <- d %>%
+  rename(Interesse.1 = warumkurs1.SQ001.,
+         Pflichtveranstaltung.1 = warumkurs1.SQ002.,
+         hilfreich.1 = warumkurs1.SQ003.,
+         Arbeitsmarkt.1 = warumkurs1.SQ004.,
+         Interesse.2 = warumkurs2.SQ001.,
+         Pflichtveranstaltung.2 = warumkurs2.SQ002.,
+         hilfreich.2 = warumkurs2.SQ003.,
+         Arbeitsmarkt.2 = warumkurs2.SQ004.,
+         Interesse.3 = warumkurs3.SQ001.,
+         Pflichtveranstaltung.3 = warumkurs3.SQ002.,
+         hilfreich.3 = warumkurs3.SQ003.,
+         Arbeitsmarkt.3 = warumkurs3.SQ004.)
+
+# remove "" as input and make NA out of it
+# dplyr solution fom here: https://stackoverflow.com/questions/24172111/change-the-blank-cells-to-na
+
+library(dplyr)
+
+empty_as_na <- function(x){
+    if("factor" %in% class(x)) x <- as.character(x) ## since ifelse wont work with factors
+    ifelse(as.character(x)!="", x, NA)
+}
+
+## transform all columns
+d <- d %>% 
+  mutate_each(funs(empty_as_na))
+
+faecher <-  d %>%
+  pivot_longer(c(Archäologie:studienfach.other.),
+             names_to = "fach",
+             values_to = "ja",
+             values_drop_na = FALSE) %>%
+  filter(ja != "Nein" &  ja != "N/A")
+
+faecher$fach <- ifelse(faecher$fach == "studienfach.other.", faecher$ja, faecher$fach)
+```
+
+
+```{r farbdef}
+n4o_tafarben <- c("#9B163C", "#9506C5", "#4DA1EE", "#36CE97",  "#4CCA33","#FF962E", "#FF6243")
+
+n4o_farben <- c("#072A54", "#9B163C", "#9506C5", "#4DA1EE", "#36CE97",  "#4CCA33","#FF962E", "#FF6243", "#005F8E", "#6A6D71", "#A6AAAC", "#E8EAEB")
+```
+
+
+
+# Teilnehmende
+
+```{r, faecher_data, eval = FALSE}
+
+# übersicht, wie viele leute mehr als ein Studienfach angegeben haben:
+
+f  <- select(d, Archäologie:Restaurierung)
+
+for (i in 1:19 ) {
+  f[,i]  <- gsub("Ja", 1, f[,i]) 
+  f[,i]  <- gsub("Nein", 0, f[,i])
+  f[,i]  <- gsub("N/A", 0, f[,i]) 
+  f[,i]  <- as.numeric(as.character(f[,i]) )
+}
+
+f$fachanzahl  <- rowSums(f, na.rm = TRUE)
+
+# übersicht über alle Fächer, die angegeben wurden erstellen:
+
+tab_fach <- as.data.frame(table(faecher$fach))
+
+write.csv2(tab_fach, "../data/derived_data/faecheraufstellung_2020-12-18.csv", fileEncoding = "UTF-8")
+
+
+
+  ggplot(data = tab_fach)+
+  geom_bar(aes(x = reorder(Var1, Freq), y = Freq), stat = "identity")+
+  labs(x = "subjects", 
+     #  y = "frequency (> 2)", 
+       name = "Main subject of respondent")+
+    coord_flip()
+
+```
+
+
+
+```{r datensatz für n4o beschneiden, eval= FALSE}
+
+# Liste der Fächer, die wir bei uns sehen:
+
+community <- c("Archäologie", "DigitalHumanities", "Digital Humanities", "Museumswissenschaften", "Anthropologie", "Grabungstechnik", "Architektur.Bauforschung", "Geographie", "Ägyptologie", "Ägyptologie ", "Ethnologie", "Restaurierung", "Konservierung", "Denkmalpflege", "Archäoinformatik", "wissenschaftliche Ausstellungserarbeitung", "Angewandte Informatik", "Bibliotheks- und Informationwissenschaft", "Bibliotheks- und Informationswissenschaft", "Kulturanthropologie", "Klimaforschung", "Numismatik", "Geophysik", "Antike Kulturen Vorderasiens und Ägyptens ", "Antike Kulturen Ägyptens und Vorderasiens ",  "Prähistorische und Historische Archäologie", "Digitale Denkmaltechnologien (Baufoschung, MINT, Bauingenieurwesen, Heritage,...)", "Altamerikanistik/ Ethnologie", "Altertumswissenschaften", "Ethnologie und Erziehungswissenschaften", "Bibliothekswissenschaft", "Bibliotheks- Informationswissenschaft", "Bibliotheksreferendariat mit Master Bibliotheks- und Informationswissenschaft", "Bibliotheksreferendariat", "Bibliothekswissenschaften", "Bibliothekswissenschaft", "Informationswissenschaften", "Informationswissenschaft", "Informationsmanagement", "Organische Residuenanalysen")
+
+# das subsetten
+d <- subset(faecher, faecher$fach %in% community)
+
+# vereinheitlichen:
+
+d$fach[d$fach == "Antike Kulturen Vorderasiens und Ägyptens "] <- "Antike Kulturen Ägyptens und Vorderasiens "
+
+d$fach[d$fach == "Bibliotheksreferendariat mit Master Bibliotheks- und Informationswissenschaft"] <- "Bibliotheks- und Informationswissenschaft"
+
+d$fach[d$fach == "Bibliotheks- und Informationswissenschaft" ] <- "Bibliotheks- und Informationswissenschaft"
+d$fach[d$fach == "Bibliotheks- und Informationwissenschaft" ] <- "Bibliotheks- und Informationswissenschaft"
+d$fach[d$fach == "Bibliotheks- Informationwissenschaft" ] <- "Bibliotheks- und Informationswissenschaft"
+d$fach[d$fach == "Bibliotheks- Informationswissenschaft" ] <- "Bibliotheks- und Informationswissenschaft"
+
+
+d$fach[d$fach == "Bibliotheksreferendariat" ] <- "Bibliotheks- und Informationswissenschaft"
+d$fach[d$fach == "Bibliothekswissenschaft" ] <- "Bibliotheks- und Informationswissenschaft"
+d$fach[d$fach == "Bibliothekswissenschaften" ] <- "Bibliotheks- und Informationswissenschaft"
+
+
+d$fach[d$fach == "Informationswissenschaft" ] <- "Bibliotheks- und Informationswissenschaft"
+d$fach[d$fach == "Informationswissenschaften" ] <- "Bibliotheks- und Informationswissenschaft"
+
+# name zu lang
+d$fach[d$fach == "Digitale Denkmaltechnologien (Baufoschung, MINT, Bauingenieurwesen, Heritage,...)" ] <- "Digitale Denkmaltechnologien"
+
+d$fach[d$fach == "Konservierung" ] <- "Konservierung/Restaurierung"
+d$fach[d$fach == "Restaurierung" ] <- "Konservierung/Restaurierung"
+
+
+
+ethn <- c("Ethnologie", "Kulturanthropologie", "Altamerikanistik/ Ethnologie", "Ethnologie und Erziehungswissenschaften")
+
+d$fach[d$fach %in% ethn] <- "Ethnologie/Kulturanthropologie"
+
+arch <-  c("Archäologie", "Prähistorische und Historische Archäologie")
+
+atw <-  c("Ägyptologie", "Ägyptologie ", "Numismatik", "Antike Kulturen Ägyptens und Vorderasiens ")
+
+d$fach[d$fach %in% atw] <- "Altertumswissenschaften"
+
+
+d$fach[d$fach %in% arch ] <- "Archäologie"
+
+save(d, file = "../data/derived_data/d.RData")
+
+
+```
+
+```{r ggplot_fächer}
+
+load("../data/derived_data/d.RData")
+
+e <-  d[!duplicated(d$id),] # Reduzierung auf die Teilnehmenden ohne Fachdopplung
+
+tab_fach <- as.data.frame(table(d$fach)) # auszählen häufigkeit der fächer
+
+ggplot(data = tab_fach)+
+  geom_bar(aes(x = reorder(Var1, Freq), y = Freq), fill = "#072A54", stat = "identity")+
+  labs(x = "Fächer", 
+       y = "Häufigkeit der Nennung (Mehrfachnennungen möglich)", 
+       name = "Main subject of respondent")+
+    coord_flip()+
+    theme_minimal()
+
+```
+
+
+Insgesamt erhielten wir 772 auswertbare Antworten. 
+
+Aus diesen wählten wir diejenigen aus, deren Ausbildungs- oder Studienfächer sich in erster Linie mit der Erforschung der materiellen Menschheitsgeschichte beschäftigen. Die Übersicht über diese Fächer und die Anzahl der Nennung finden Sie unter Abbildung \@ref(fig:ggplot_fächer). 
+
+Die folgende Studie bezieht sich also auf die `r nrow(d)` Antworten in Bezug auf die Fächer. 
+
+
+## Demographie der Nachwuchswissenschaftler*innen für NFDI4Objects 
+
+An dieser Stelle werden wir die Antwortenden im Bezug auf demographische Antworten analysieren.
+
+### Alter
+
+```{r age}
+library(ggplot2)
+
+sum_alter  <- summary(e$alter)
+
+ggplot(data = e)+
+  geom_histogram(aes(x = alter), binwidth = 1,  fill = "#072A54")+
+  xlab("age")+
+  geom_text(aes(x = 65, y = 20, label = paste("n =", nrow(e))))+
+  geom_text(aes(x = 65, y = 10, label = paste("NA's = ", sum_alter[7])))+
+  theme_minimal()
+
+
+
+```
+
+Most of the respondents are aged between `r sum_alter[2]` (first quartile) and `r sum_alter[5]` (third quartile) years old. The youngest person is `r sum_alter[1]` and the oldest `r sum_alter[6]`. Median age is `r sum_alter[3]` and mean age is `r sum_alter[4]`. Though the age is not normal-distributed, we are glad to see a good cross-section through all age-classes that usually are in the training stage.
+
+
+```{r, eval= FALSE}
+shapiro.test(e$alter)
+```
+
+
+
+### Art der Ausbildung
+
+
+```{r training}
+
+ artausb <- as.data.frame(table(e$artausbildung))
+
+ggplot(data = artausb, aes(x = reorder(Var1, Freq), y = Freq))+
+  geom_col(aes(fill = Var1))+
+  scale_fill_manual(breaks = artausb$Var1,
+                        values = n4o_tafarben)+
+  geom_text(aes(label = artausb$Freq), hjust=-0.01)+
+  labs(x = "Art der Ausbildung",
+       y = "Häufigkeit")+
+    geom_text(aes(x = 1, y = 90, label = paste("n =", nrow(e))))+
+  guides(fill = FALSE)+
+  coord_flip()+
+  theme_minimal()
+  
+```
+
+Looking at in what kind of training situation our respondents are, we can observe most being students at BA and MA level. There are fewer phD-students and even less people taking a Volontariat or an advanced training. 
+
+
+### Art der Ausbildung und Institution
+
+```{r ausbildung}
+
+ ausb_inst <- as.data.frame(table(e$artausbildung, e$institution))
+
+ggplot(data = ausb_inst, aes(x = reorder(Var2, Freq), y = Freq))+
+  geom_col(aes(fill = Var1))+
+  scale_fill_manual(values = n4o_tafarben)+
+  labs(x = "", y = "Häufigkeit")+
+  geom_text(aes(x = Var2, y = Freq, label = ifelse(Freq > 1, paste(round(Freq/nrow(e),2)*100, "%"), ""), group = Var1),
+                  position = position_stack(vjust = .5))+
+  guides(fill = FALSE)+
+  coord_flip()+
+  theme_minimal()
+
+ggsave("../figures/ausbildung_proz.png", dpi = 300, width = 15)
+
+```
+
+We can see here that most students study at a university, while less than half of that study at a Hochschule (technical uni?). At museums most respodents are in a Volontariat and at the Heritage Management institutions respondents take advanced trainings.
+
+### Geschlecht
+
+Wie repräsentativ ist die Umfrage bezüglich des Geschlechts der Antwortenden?
+
+```{r gender}
+
+gender <- as.data.frame(table(e$geschlecht))
+
+ggplot(data = gender, aes(x = reorder(Var1, -Freq), y = Freq))+
+  geom_bar(stat = "identity",  fill = "#072A54")+
+    labs(x = "Geschlecht", 
+       y = "Häufigkeit", 
+       name = "")+
+    geom_text(aes(label = Freq), vjust = -0.7)+
+  theme_minimal()
+```
+
+
+Die meisten Antwortenden sind weiblich. In der EvaBA-Umfrage der DGUF (@siegmund_etal_2020) waren 56% der Umfrageteilnehmenden (berufstätige Archäolog\*innen) weiblich. Die DISCO-Studie über die berufstätigen Archäolog*innen von 2014 zeigt in der Altersgruppe der 21-30 jährigen ähnliche Verhältnisse. Hier sind seit 2014 Frauen in der Überzahl. In den "älteren Kohorten" zeigt sich wie 2009 ein deutlicher Männer-Überhang, allerdings mit einem Trend der Angleichung der Geschlechtverhältnisse [@bentz_2014].
+
+Schaut man jedoch auf die Ausbildungsverteilung auf die Geschlechter, lässt sich festhalten, dass der Anteil der Männer steigt, je "fortgeschrittener" das Ausbildungsverhältnis.
+
+```{r}
+gend_art <- as.data.frame(table(e$geschlecht, e$artausbildung)) # Kreuztabelle als dataframe abspeichern, um ihn zu bearbeiten
+
+g_a <- gend_art %>%
+  filter(Var1 != "keine Angabe" & Var1 != "divers")  %>%             # für einen Test zu klein besetzte Kategorien raus
+  filter(Var2 != "Gasthörer*innen-Status" & Var2 != "Ausbildung")
+  
+g_a$Var1  <-  droplevels(g_a$Var1) #ungenutzte factor levels raus
+g_a$Var2  <-  droplevels(g_a$Var2)
+
+g_a <- xtabs(Freq ~ Var1 + Var2, g_a) # zurück in eine Tabelle
+
+library(lsr)
+cramersV(g_a)
+
+library(kableExtra)
+g_a  %>%
+  kable()
+
+```
+
+Einzige Ausnahme sind die Volontariate, die nach einem abgeschlossenen Studium, häufig nach der Dissertation, aufgenommen werden und in denen der stärkste Frauenüberhang zu verzeichnen ist: `r gend_art$Freq[gend_art$Var1 == "weiblich" & gend_art$Var2 == "Volontariat"]` von `r sum(gend_art$Freq[gend_art$Var2 == "Volontariat"])` sind weiblich.
+
+### Jahre in der Ausbildung?
+
+```{r dauerausbildung}
+ggplot()+
+  geom_bar(data = e, aes(x = jahrausbildung), fill = "#072A54")+
+  labs(x = "Seit wie viel Jahren befinden Sie sich in dieser Ausbildung?",
+       y = "Häufigkeit")+
+  scale_x_continuous(breaks = c(1,5,10,15,20,30))+
+  theme_minimal()
+
+ x <-  e %>% filter(jahrausbildung <= 6) %>% nrow() / nrow(e)
+```
+
+Die meisten Antwortenden befinden sich um die `r median(e$jahrausbildung, na.rm = TRUE)` Jahre in der Ausbildung (Median). Dies beinhaltet für Studierende konsekutive Studiengänge zu dem gleichen Thema. 
+
+### Für wie IT-affin halten Sie sich?
+
+```{r it_affinity}
+e %>%
+  ggplot()+
+  geom_bar(aes(x = itaffinitaet.SQ001.), fill = "#072A54")+
+  geom_text(aes(x = 1, y = 50, label = paste("N/A =", sum(is.na(e$itaffinitaet.SQ001.)) )))+
+  labs(x = "IT-Affinität (Selbstaussage)",
+       y = "Häufigkeit")+
+  scale_x_continuous(breaks =  c(seq(0,10,2)))+
+  theme_minimal()
+```
+
+### Als wie geübt schätzen Sie sich im Umgang mit Ihren Dokumenten und Daten ein? 
+
+
+```{r it_skills}
+ggplot()+
+  geom_bar(aes(e$umgangdaten.SQ001.), fill = "#072A54")+
+  geom_text(aes(x = 1, y = 50, label = paste("N/A =", sum(is.na(e$umgangdaten.SQ001.)) )))+
+  labs(x = "1: sehr unsicher bis 10: sehr sicher",
+       title = "Selbsteinschätzung im Umgang mit Daten und Dokumenten",
+       y = "Häufigkeit")+
+  scale_x_continuous(breaks = c(seq(0,10,2)))+
+  theme_minimal()
+```
+
+Die meisten Antwortenden  schätzen ihre eigenen Fähigkeiten um `r median(e$umgangdaten.SQ001., na.rm = TRUE)` von 10 Punkten (Median) in der Sicherheit im Umgang mit Daten ein. Hier scheinen sich zwei Gruppen zu bilden, diejenigen die recht unsicher sind (bis 5 Punkte: `r e %>% filter(umgangdaten.SQ001. < 6 & !is.na(umgangdaten.SQ001.))%>% nrow()`) und diejenigen, die "fast normalverteilt" ihre Fähigkeiten besser einschätzen (`r e %>% filter(umgangdaten.SQ001. > 5 & !is.na(umgangdaten.SQ001.))%>% nrow()` Menschen).
+
+
+### Persönlicher Umgang mit Dokumenten und Dateien
+
+Es kursiert das Gerücht, das sogenannte "digital natives" keine eigenen Ordnerstrukturen mehr anlegen würden und, durch mobile Endgeräte daran gewöhnt, Dateien v.a. durch die Suchfunktion Ihrer Geräte auffinden würden.
+
+
+```{r findedateien}
+ggplot()+
+  geom_bar(data = e, aes(x = findendateien), fill = n4o_farben[1])+
+  geom_text(aes(x = 1, y = 200, label = paste("N/A =", sum(is.na(e$findendateien)) )))+
+  scale_x_discrete(labels = c("Suchfunktion", "Ordnerstruktur", "beides", "NA"))+
+  theme_minimal()+
+  coord_flip()
+
+```
+
+
+Dies konnte durch die Umfrage nicht bestätigt werden.
+
+`r sum(e$rechnerfolderstruct == "Ja", na.rm=TRUE)` Antwortende haben nach Eigenauskunft auf Ihrem Rechner eine dem/n Arbeitsziel(en) angepasste Ordnerstruktur konzipiert und angelegt, nur `r sum(e$rechnerfolderstruct == "Nein", na.rm=TRUE)` nicht.
+
+
+```{r}
+ggplot()+
+  geom_bar(aes(x = e$dateiversionen), fill = n4o_farben[1])+
+  labs(title = "Legen Sie verschiedene Versionen von Dateien an?",
+       x = "", 
+       y = "Anzahl")+
+  scale_x_discrete(labels = c("ja, mit Datum", "ja, mit Bezeichnung", "ja, mit Versionierungssystem", "nein", "ja, mithilfe von Ordnern", "NA"))+
+  theme_minimal()+
+  coord_flip()
+
+```
+`r sum(e$dateiversionen == "nein", na.rm = TRUE)` legen keine verschiedenen Versionen Ihrer Dokumenten und Dateien an. Die übrigen nutzen v.a. Bezeichnungen wie "Abschlussarbeit_final.docx", einige auch das Datum zur Versionierung. ` r sum(e$dateiversionen == "ja, und nutze ein Versionierungssystem (wie z. B. git, svn)", na.rm = TRUE)` benutzen Versionierungssysteme wie git und svn.
+
+Die Auszubildenden wissen also größtenteils darum, dass Versionierung eine sinnvolle Angelegenheit ist.
+
+Als Backupstrategien werden ähnliche Modi genutzt, wie in der großen NFDI4Objects-Umfrage herausgekommen ist:
+
+```{r}
+e %>%
+  pivot_longer(backupstrategie2.SQ001.:backupstrategie2.SQ006.,
+               names_to = "backup",
+               values_to = "backup_ja",
+               values_drop_na = TRUE) %>%
+  filter(backup_ja == "Ja") %>%
+  mutate(backup = recode(backup,
+                          "backupstrategie2.SQ001." = "Externe Festplatte",
+                         "backupstrategie2.SQ002." =  "USB",
+                          "backupstrategie2.SQ003." = "CD/DVD",
+                          "backupstrategie2.SQ004." = "private Cloud-Lösung",
+                          "backupstrategie2.SQ005." = "institutionelle Cloud-Lösung",
+                          "backupstrategie2.SQ006." = "Versionierungssystem")) %>%
+  group_by(backup) %>%
+  summarise(Count = n())%>%
+  filter(Count > 2)%>%
+ggplot()+
+  geom_col(aes(x = reorder(backup, Count), y = Count), fill = n4o_farben[1])+
+  labs(x = "Backupstrategien",
+       y = "Mehrfachnennung möglich")+
+  theme_minimal()+
+  coord_flip()
+
+```
+
+Während CD und DVD noch weiter abgeschlagen werden, sind USB und externe Festplatten deutlich die häufigste Lösung. 
+Einige Studierende und Auszubildende nutzen E-mails als backup ( `r length(grep("mail", tolower(e$backupstrategie2.other.)))` students), und einige (( `r length(grep("server", tolower(e$backupstrategie2.other.)))`) nennen extra Server.
+
+`r sum(e$angstdatenverlust == "ja", na.rm=TRUE) ` haben Angst, Daten zu verlieren. 
+
+`r sum(e$angstdatenverlust == "nein", na.rm=TRUE)` haben keine Angst vor Datenverlust
+
+`r  sum(e$angstdatenverlust == "dazu habe ich mir bisher keine Gedanken gemacht", na.rm=TRUE)` haben sich dazu noch keine Gedanken gemacht  (NA = `r sum(is.na(d$angstdatenverlust)) `).
+
+Einer ganzen Reihe der Antwortenden sind Metadaten bekannt:
+
+```{r}
+e %>%
+  ggplot()+
+  geom_bar(aes(x = metadaten), fill = n4o_farben[1])+
+  theme_minimal()+
+  labs(title = "Sind Ihnen Metadaten bekannt?",
+       x = "")+
+  coord_flip()
+
+```
+
+
+# Wahrgenommenes Kursangebot
+
+```{r fdmkursejanein}
+fdm_ja <- e %>%
+  subset(fdmkursejanein == "ja") %>%
+  nrow()
+
+fdm_nein <- e %>%
+  subset(fdmkursejanein == "nein") %>%
+  nrow()
+fdm_wn <- e %>%
+  subset(fdmkursejanein == "weiß ich nicht") %>%
+  nrow()
+```
+
+Die Umfrageteilnehmer*innen wurden gefragt, ob es an ihrer Institution Kurse mit Bezug zum Forschungsdatenmanagement gibt: `r fdm_ja` antowrteten bejahend, `r fdm_nein` sagten nein. Die meisten (`r fdm_wn`) waren sich unsicher, was zeigen kann, dass sie entweder nicht einschätzen wollten, ob es Kurse außerhalb der eigenen direkten Umgebung gibt oder sich nicht sicher waren, was Forschungsdatenmanagement alles beinhaltet.
+
+```{r berechnung}
+kursja <- e %>%
+  filter(Kurswahrgenommenjane == "ja") %>%
+  nrow()
+
+kursnein <- e %>%
+  filter(Kurswahrgenommenjane == "nein") %>%
+  nrow()
+
+ggplot()+
+  geom_bar(data = e, aes(x = Kurswahrgenommenjane),  fill = "#072A54")+
+  labs(x = "Haben Sie schon einmal an einem Kurs \n an Ihrer Ausbildungsstätte teilgenommen, in dem \n es um den Umgang mit Daten ging?",
+       y = "Anzahl")+
+  theme_minimal()
+```
+
+
+Die meisten Studierenden haben noch nicht an einem Kurs zum Datenmanagement teilgenommen (`r kursnein` Antwortn), einige jedoch schon (`r kursja` Antworten).
+
+Diejenigen, die an Kursen teilgenommen hatten, wurden gebeten, weitere Informationen preiszugeben:
+
+```{r nkurse_fdm}
+sum_nkurse <- summary(e$nkurse)
+
+ggplot()+
+  geom_bar(data = e, aes(x = nkurse),  fill = "#072A54")+
+  geom_text(aes(x = 10, y = 30, label = paste("n =", nrow(e)-sum_nkurse[7])))+
+  scale_x_continuous(name = "Anzahl der belegten relevanten Kurse",
+                   breaks = c(1:10),
+                    labels = as.character(1:10))+
+  labs(y = "Häufigkeit")+
+  theme_minimal()
+```
+
+Most of the respondents, who said they had already taken a course on data management, named between `r sum_nkurse[2]` (first quartile) and `r sum_nkurse[5]` (third quartile) courses. The median is `r sum_nkurse[3]` and mean is `r sum_nkurse[4]`. The maximal value of `r sum_nkurse[6]` is an outlier.
+
+## Details zu den belegten Kursen
+
+```{r}
+# note: don't pivot longer for subject or reason
+
+d_kurs1 <- data.frame(e$fach, e$alter, e$id, e$artausbildung, e$jahrausbildung, e$institution, e$kursfach1, e$bundesland1, e$bundesland1.other., e$kursjahr1, e$kurspflicht1, e$kursquali1.SQ001., e$kursquali1.SQ002.)
+
+d_kurs2 <- data.frame(e$fach, e$alter, e$id, e$artausbildung, e$jahrausbildung, e$institution, e$fach2, e$bundesland2, e$bundesland2.other., e$kursjahr2, e$kurspflicht2, e$kursquali2.SQ001., e$kursquali2.SQ002.)
+
+d_kurs3 <- data.frame(e$fach, e$alter, e$id, e$artausbildung, e$jahrausbildung, e$institution, e$fach3, e$bundesland3, e$bundesland3.other., e$kursjahr3, e$kurspflicht3, e$kursquali3.SQ001., e$kursquali3.SQ002.)
+
+cnames <- c("fach", "alter", "id", "artausbildung", "jahrausbildung", "institution", "kursfach", "bundesland", "bundesland.sonst", "kursjahr", "kurspflicht", "kursquali1", "kursquali2") 
+
+
+colnames(d_kurs1) <-  cnames 
+colnames(d_kurs2) <-  cnames 
+colnames(d_kurs3) <-  cnames 
+
+kurse_intern <-  rbind(d_kurs1, d_kurs2, d_kurs3)
+
+#kurse_intern$kursfach <- kurse_intern$kursfach %>%
+#  recode("Archäologie" = "Archaeology",
+#         "Archäobiowissenschaften (-zoologie, -botanik, Dendrochronologie, physische Anthropologie u.ä.)" = "Archaeological Sciences",
+#         "Archäoinformatik" = "Digital and Computational Archaeology",
+#         "Architektur / Bauforschung" = "Architecture / Building research", 
+#         "Geochemie" = "Geochemistry",
+#         "Geodäsie / Vermessung" = "Geodesy / Surveying",
+#         "Geographie" = "Geography",
+#         "Geologie (u.a. Mineralogie, Petrologie, Paläontologie)" = "Geology", 
+#         "Geschichtswissenschaften" = "History",
+#         "Grabungstechnik" = "Excavation Techniques",
+#         "Klimaforschung" = "Climate Research", 
+#         "Konservierung / Restaurierung" = "Conversation / Restauration", 
+#         "Kulturanthropologie / Ethnologie" = "Cultural Anthropology", 
+#         "Kunstgeschichte" = "Art History", 
+#         "MINT: aus dem Bereich d. Mathematik, Informatik, Naturwissenschaft oder Technik" = "STEM",
+#         "Museumswissenschaften" = "Museum Studies", 
+#         "Sonstiges" = "Other") 
+
+```
+
+
+### Unterschiede zwischen den Bundesländern
+
+Ohne auf einzelne Ausbildungsstätten aufmerksam machen zu wollen, untersuchen wir hier die Situation in den unterschiedlichen Bundesländern: Wie viele Kurse zu digitalen FDM-Themen werden besucht und wie entwickelt sich dies durch die Zeit?
+
+```{r inst_kurse_bund }
+#kurse_intern%>%
+#  filter(!is.na(bundesland.sonst))%>%
+#  print(bundesland.sonst)
+# noch hübsch machen
+
+kurse_intern %>%
+  filter(!is.na(bundesland)) %>%
+  group_by(bundesland) %>%
+  summarize(Count=n()) %>%
+ggplot()+
+  geom_col(aes(x = reorder(bundesland, Count), y = Count), fill = "#072A54" )+
+  geom_text(aes(x = 7, y = 25, label = "Wien und Kairo"))+
+  labs(x = "", y = "Häufigkeit")+
+  geom_text(aes(x = 1, y = 80, label = paste("n = ", nrow(kurse_intern))))+
+  coord_flip()+
+  theme_minimal()
+
+```
+
+Die Häufigkeit, mit der Kurse in Nordrhein-Westfalen (NRW) verortet werden, sticht heraus. Hier lassen sich mehrere Gründe vermuten: 1. NRW ist eines der Länder mit einer hohen Anzahl von Studierenden in unterschiedlichen archäologischen und angrenzenden Fächern. An vier großen Universitäten lassen sich mehrere Fächer studieren  (für die Ur- und Frühgeschichte sowie Mittelalterliche Archäologie siehe @siegmund_nodate) und in drei davon gibt es Schwerpunkte, die ein Kursangebot im Bereich Datenmanagement erfordern: Bochum, Bonn und Köln. Sowohl Köln (seit 2006/07, verstärkt seit 2016 mit der Einrichtung einer Professur) als auch Bonn (seit 2015) bieten jedes Semester Lehrveranstaltungen im Bereich Archäoinformatik an. In Bochum gibt es eine Ausrichtung auf naturwissenschaftliche Archäologie, in der regelmäßig Kurse zu digitaler Dokumentation und Analyse angeboten werden.
+In der EvaBA-Umfrage der DGUF sowie in den beiden DISCO-Studien 2006-2008 und 2012-2014 (@siegmund_etal_2020)  war NRW das Land, aus dem die meisten Antworten gesammelt wurden.
+
+### Entiwcklung über die Jahre
+
+```{r}
+
+kurs_inst_jahr <- as.data.frame(table(kurse_intern$kursjahr, kurse_intern$bundesland))
+
+bndl_viel <- kurs_inst_jahr %>%
+  filter(!is.na(Var2) & Var2 != "")%>%
+  group_by(Var2) %>% 
+  summarise(Frequency = sum(Freq))%>%
+filter(Frequency > 8)
+  
+kurs_inst_jahr %>%
+  filter(Var2 %in% bndl_viel$Var2) %>%
+ggplot(aes(x = Var1, col = Var2, y = Freq))+
+  geom_point() +
+  geom_line(aes(group = Var2))+
+  theme_minimal()+
+  scale_colour_manual(values = n4o_farben[1:9])+
+  labs(x = "Jahr", 
+       y = "Anzahl", 
+       col = "Bundesland mit mehr als 8 Kursen",
+       title = "Anzahl FDM-bezogene Kurse pro Jahr und Bundesland")+
+
+
+  ggsave("../figures/first_draft_jahr_kurs.png", dpi = 300, units = "cm", height = 10)
+
+```
+
+In der Entwicklung der Anzahl der Kurse lässt sich ein starker Anstieg seit etwa 2015 feststellen. Der starke Anstieg ab 2015 lässt sich neben den allgeminen digitalen Transformationsprozessen in der Wissenschaft und Ausbildung und der Einrichtung der Archäoinformatikprofessuren in Köln und Kiel, sowie von Studiengängen für Digital Humanities, vor allem damit erklären, dass die meisten Antwortenden (~ `r round(x, 2)*100` %) sich seit bis zu 6 Jahren in der Ausbildung im Bereich der Erforschung der Menschheitsgeschichte befinden.
+
+
+## Themenschwerpunkt der belegten Kurse 
+
+```{r}
+
+#umformung der daten: kursbeschreibung gibt thema, kursfach, in welchem fach das angeboten wurde, bundsland
+
+d_kurs1 <- e %>% 
+  pivot_longer(kursbeschreibung1.3D.:kursbeschreibung1.other., # fasse diese zusammen
+               names_to = "kurs1", # in dieser neuen spalte 
+               names_prefix = "kursbeschreibung1.", #lösch diesen prefix
+               values_to = "kurs1ja", # ja oder nein in diese spalte
+               values_drop_na = TRUE)%>% # lösch alle NA
+  filter(kurs1ja != "Nein" & kurs1ja != "N/A" & kurs1ja != "") # filter auf die die "ja" haben
+  
+
+# umformung daten kurs zwei
+
+d_kurs2 <- e %>% 
+  pivot_longer(kursbeschreibung2.3D.:kursbeschreibung2.other., # fasse diese zusammen
+               names_to = "kurs2", # in dieser neuen spalte 
+               names_prefix = "kursbeschreibung2.", #lösch diesen prefix
+               values_to = "kurs2ja", # ja oder nein in diese spalte
+               values_drop_na = TRUE)%>% # lösch alle NA
+  filter(kurs2ja != "Nein" & kurs2ja != "N/A" & kurs2ja != "")
+
+
+
+
+d_kurs3 <- e %>% 
+  pivot_longer(kursbeschreibung3.3D.:kursbeschreibung3.other., # fasse diese zusammen
+               names_to = "kurs3", # in dieser neuen spalte 
+               names_prefix = "kursbeschreibung3.", #lösch diesen prefix
+               values_to = "kurs3ja", # ja oder nein in diese spalte
+               values_drop_na = TRUE)%>% # lösch alle NA
+  filter(kurs3ja != "Nein" & kurs3ja != "N/A" & kurs3ja != "")
+
+# ... das wär bestimmt irgendwie leichter gegangen...
+
+
+# in langes Format umwandeln der kurs 1-3 nach THEMEN OHNE Grund!
+
+d_kurs1 <- d_kurs1 %>%
+  rename(kursthema = kurs1, 
+         kursja = kurs1ja,
+         #grund = warum1,
+         #grundja = warum1ja,
+         kursfach = kursfach1,
+         fach.other = kursfach1.other.,
+         bundesland = bundesland1,
+         bundesland.other = bundesland1.other.,
+         kursjahr = kursjahr1,
+         kurspflicht = kurspflicht1,
+         kursquali1 = kursquali1.SQ001.,
+         kurs_umsetzen = kursquali1.SQ002.)
+
+d_kurs2 <- d_kurs2 %>%
+  rename(kursthema = kurs2,
+         kursja = kurs2ja,
+        # grund = warum2,
+        # grundja = warum2ja,
+         kursfach = fach2,
+         fach.other = fach2.other.,
+         bundesland = bundesland2,
+         bundesland.other = bundesland2.other.,
+         kursjahr = kursjahr2,
+         kurspflicht = kurspflicht2,
+         kursquali1 = kursquali2.SQ001.,
+         kurs_umsetzen = kursquali2.SQ002.)
+
+d_kurs3 <- d_kurs3 %>%
+  rename(kursthema = kurs3,
+         kursja = kurs3ja,
+        # grund = warum3,
+        # grundja = warum3ja,
+         kursfach = fach3,
+         fach.other = fach3.other.,
+         bundesland = bundesland3,
+         bundesland.other = bundesland3.other.,
+         kursjahr = kursjahr3,
+         kurspflicht = kurspflicht3,
+         kursquali1 = kursquali3.SQ001.,
+         kurs_umsetzen = kursquali3.SQ002.)
+
+common_cols <- intersect(colnames(d_kurs1), colnames(d_kurs2))
+common_cols2 <- intersect(colnames(d_kurs2), colnames(d_kurs3))
+
+common_cols <- intersect(common_cols, common_cols2)
+
+d_kurs_inst <- rbind(
+  subset(d_kurs1, select = common_cols), 
+  subset(d_kurs2, select = common_cols),
+  subset(d_kurs3, select = common_cols) )
+
+d_kurs_inst$kursthema <- d_kurs_inst$kursthema %>%
+  recode( "3D." = "3D-Modellierung, -Scans, -Photogrammetrie",
+          "arch." = "Archivierung",
+          "auszsprache." = "Auszeichnungssprachen",
+          "bildbearb." = "Bildbearbeitung",
+          "cad." = "CAD",
+          "datenb." = "Datenbanken",
+          "datenkur." = "Datenkuration",
+          "datensich." = "Datensicherheit",
+          "datenman." = "Datenmanagement",
+          "diged." = "Digital Editionen",
+          "digdatenausw." = "Digitale Datenanalyse",
+          "digdok." = "Digitale Dokumentation",
+          "digmetheor." = "Digitale Methoden und Theory",
+          "digressour." = "Digitale Ressourcen", 
+          "digverm." = "Digitale Vermessung",
+          "photogramm." = "Photogrammetrie",
+          "programmierung." = "Skriptsprachen und Programmierung",
+          "tools." = "Software und Tools",
+          "spatanal." = "Räumliche Analysen",
+          "stat." = "Statistik",
+          "textanal." = "Textanalyse",
+          "onlineress." = "Online-Ressourcen",
+          "metad." = "Metadaten", 
+          "webtechn." = "Webtechnologien",
+          "gis." = "GIS / Webkartierung",
+          "geophys." = "Geophysik",
+          "urheber." = "Urheber*innenrecht",
+          "other." = "Anderes")
+
+# Original:
+    # 3D-Modellierung / 3D-Scans / 3D-Photogrammetrie
+    #Archivierung
+    #Auszeichnungssprachen
+    #Bildbearbeitung
+    #CAD
+    #Datenkuratierung
+    #Datenbanken
+    #Datensicherheit
+    #Datenmanagement
+    #Digitales Editieren
+    #Digitale Datenauswertung
+    #Digitale Dokumentation
+    #Digitale Methoden & Theorien
+    #Digitale Ressourcen (z. B. ZENON, Arachne, o.ä.)
+    #Digitale Vermessung
+    #Photogrammetrie
+    #Programmiersprachen (R, Python, CSS, …) und Programmierung
+    #Software und Tools
+    #Spatial Analysis
+    #Statistik
+    #Textanalyse
+    #Online-Ressourcen
+    #Metadaten
+    #Webtechnologien
+    #GIS / Web-Kartierung
+    #Geophysik
+    #Urheber*innenrecht
+    #Sonstiges: 
+
+d_kurs_inst$kursfach  <- d_kurs_inst$kursfach %>%
+  recode("Archäobiowissenschaften (-zoologie, -botanik, Dendrochronologie, physische Anthropologie u.ä.)" = "Archäobiowissenschaften",
+     "MINT: aus dem Bereich d. Mathematik, Informatik, Naturwissenschaft oder Technik" = "MINT")
+
+
+```
+
+Respondents were asked to give the details of up to three courses they already took. 
+
+### Which kind of topic was offered in which subject?
+
+```{r}
+
+as.data.frame(table(d_kurs_inst$kursfach, d_kurs_inst$kursthema)) %>%
+  ggplot()+
+  geom_col(aes(x = reorder(Var2, Freq), y = Freq, fill = Var1))+
+  scale_fill_manual(values = c(n4o_farben, "#FFFFBB", "#A6AACC"),
+                    name = "Fach, in dem der Kurs angeboten wurde")+
+  labs(x = "Themen",
+       y = "Häufigkeit")+
+  coord_flip()+
+  theme_minimal()
+```
+
+Kurse mit Themen zu Datenbanken, Datenmanagement und GIS wurden am häufigsten genannt. Diese wurden häufig innerhalb archäologischer, archäoinformatischer und Digital Humanities Studiengänge angeboten. Museumswissenschaften, Geographie und Grabungstechnik bieten ebenfalls eine signifikante Anzahl von Kursen an. 
+ 
+
+### Study subject and course offered in
+
+```{r}
+kurse_intern$kursfach  <- kurse_intern$kursfach %>%
+  recode("Archäobiowissenschaften (-zoologie, -botanik, Dendrochronologie, physische Anthropologie u.ä.)" = "Archäobiowissenschaften",
+     "MINT: aus dem Bereich d. Mathematik, Informatik, Naturwissenschaft oder Technik" = "MINT")
+
+
+
+try <- kurse_intern  %>% 
+  filter(!is.na(fach)) %>% 
+  filter(!is.na(kursfach)) %>%
+  count(fach, kursfach) %>%
+  group_by(fach) 
+
+ggplot(data = try, aes(x=kursfach, y=fach, fill=as.factor(n))) + 
+  geom_tile()+
+  labs(x = "Fach, in dem der Kurs angeboten wurde", y = "Hauptfach d. Antwortenden")+
+  theme_minimal()+
+  scale_fill_manual(values = c(blues9[2:9], n4o_farben[1:3]),
+                    name = "Anzahl der Kurse")+
+    theme(axis.text.x = element_text(angle=90))
+
+```
+
+Suchen sich die Umfrageteilnehmer*innen Kurse aus anderen Studienfächern, um digitale Fähigkeiten und FDM zu lernen? In dieser Abbildung wird die Anzahl der Studiernden/Auszubildenden eines Hauptfachs gezeigt und in welchen Fächern sie Kurse belegen. Besonders hoch sind die Zahlen der Archäologiestudierenden, die Kurse in der Archäologie, der Archäoinformatik und den DH belegen. Der Anteil der Archäologiestudierenden ist in der Umfrage sehr hoch, weswegen hier auch eine größere Spannbreite zu beobachten ist. Ansonsten bleiben die meisten Teilnehmer\*innen mit der Kurswahl relativ häufig innerhalb des eigenen Fachs. 
+
+
+### Gründe für die Kurswahl
+
+
+```{r inst_kurse_grund}
+
+# alle gründe in einer Spalte sammeln
+ d_kurs_inst <- d_kurs_inst %>% 
+  pivot_longer(Interesse.1:warumkurs1.other.,
+               names_to = "warum1",
+               values_to = "warum1ja",
+               values_drop_na = TRUE)%>%
+  filter(warum1ja == "Ja")%>%
+  pivot_longer(Interesse.2:warumkurs2.other.,
+               names_to = "warum2",
+               values_to = "warum2ja",
+               values_drop_na = TRUE)%>%
+  filter(warum2ja == "Ja")%>%
+      pivot_longer(Interesse.3:warumkurs3.other.,
+               names_to = "warum3",
+               values_to = "warum3ja",
+               values_drop_na = TRUE)%>%
+  filter(warum3ja == "Ja")%>%
+  mutate(grund = coalesce(warum1, warum2, warum3))
+
+d_kurs_inst$grund <- gsub('[0-9]+', '', d_kurs_inst$grund)    
+
+```
+
+```{r gründe_kurs}
+as.data.frame(table(d_kurs_inst$grund, d_kurs_inst$kursthema)) %>%
+  ggplot()+
+  geom_col(aes(x = reorder(Var2, Freq), y = Freq, fill = Var1))+
+  labs(x = "Häufigkeiten (Mehrfachantworten nötig)", 
+       y = "Kursthema")+
+  scale_fill_manual(labels = c("Verbessert Jobchancen",
+                               "Nützlich für die Arbeit",
+                               "Interesse",
+                               "Pflichtveranstaltung"),
+                      name = "Gründe für die Kurswahl",
+                    values = n4o_farben[c(1,2,4,10)])+
+  coord_flip()+
+  theme_minimal()
+```
+
+Die Gründe für die Kurswahl sind insgesamt relativ gleich 
+
+Interestingly enough, the main reason to take a GIS course never seems to have been it being a mandatory class.
+... was kann man noch auswerten?
+
+
+or on the subject students study`
+
+```{r}
+e_g <- e %>%
+ pivot_longer(Interesse.1:warumkurs1.other.,
+               names_to = "warum1",
+               values_to = "warum1ja",
+               values_drop_na = TRUE)%>%
+  filter(warum1ja == "Ja")%>%
+  pivot_longer(Interesse.2:warumkurs2.other.,
+               names_to = "warum2",
+               values_to = "warum2ja",
+               values_drop_na = TRUE)%>%
+  filter(warum2ja == "Ja")%>%
+      pivot_longer(Interesse.3:warumkurs3.other.,
+               names_to = "warum3",
+               values_to = "warum3ja",
+               values_drop_na = TRUE)%>%
+  filter(warum3ja == "Ja")%>%
+  mutate(grund = coalesce(warum1, warum2, warum3))
+
+e_g$grund <- gsub('[0-9]+', '', e_g$grund)    
+
+```
+
+```{r grund_kurswahl}
+
+
+as.data.frame(table(e_g$grund)) %>%
+  ggplot()+
+  geom_col(aes(x = reorder(Var1, Freq), y = Freq), fill = n4o_farben[1])+
+  labs(y = "Mehrfachnennung möglich", 
+       x = "Gründe für Kurswahl")+
+  coord_flip()+
+  theme_minimal()
+
+
+```
+
+Die Umfrageergebnisse zeigen hier, dass Studierende und Auszubildende nicht nur Interessse an Kursen zu digitalen Inhalten haben, sondern sich auch bewusst sind, dass dies Vorteile auf dem Arbeitsmarkt bringen kann und für die eigene Arbeit hilfreich ist.
+
+### Gründe FDM-Kurse nicht zu wählen
+
+```{r grund_keinkurs}
+e %>%
+  pivot_longer(keinkurs.SQ001.:keinkurs.SQ004.,
+               names_to = "keinkurs_weil",
+               values_to = "keinkursja") %>%
+  filter(keinkursja == "Ja")%>%
+  ggplot()+
+  geom_bar(aes(x = keinkurs_weil), fill = n4o_farben[1])+
+  scale_x_discrete(labels = c("keine Zeit",
+                              "gleichzeitig mit Pflichtkursen",
+                              "nicht anrechenbar",
+                              "kein Interesse"))+
+  labs(x = "",
+       title = "Gründe nicht an Kursen teilzunehmen",
+       y = "Mehrfachnennungen möglich" )+
+  coord_flip()+
+  theme_minimal()
+```
+
+Am häufigsten werden Gründe genannt, die mit Zeitproblemen zu tun haben. Hier liegt einerseits eine Priorisierung der Studierenden vor, andererseits teilweise eng-gestrickte Curricula, die den Besuch nicht-anrechenbarer Kurse für Studierende insbesondere dann erschweren, wenn diese z.B. aufgrund einer BAFöG-Finanzierung in der sog. "Regelstudienzeit" studieren möchten. Hier zeigt sich auch, dass Kurse zu FDM bisher wenig in den Studienprogrammen verankert sind, weswegen sich zeitliche Überlappungen mit anderen Kursen ergeben.
+
+## Externe Kursangebote
+
+In der Umfrage wurde abgefragt, ob sich Studierende und Aus- und Fortzubildende sowie Volontär*innen ebenfalls außerhalb ihrer eigenen Institution fortbilden.  
+
+### Autodidaktik
+
+Haben Sie sich selbständig und autodidaktisch zu Themen des Datenmanagements fortgebildet? 
+
+
+```{r autodidakt}
+
+e$autodidakt <- factor(e$autodidakt, level = c("Ja", "Nein", "N/A"))
+ggplot()+
+geom_bar(aes(x = e$autodidakt), fill = n4o_farben[1])+
+  scale_x_discrete(breaks = c("Ja", "Nein", "N/A"))+
+  labs(x = "Haben Sie sich selbständig und autodidaktisch \n zu Themen des Datenmanagements fortgebildet?",
+       y = "")+
+  theme_minimal()
+```
+
+
+Diejenigen, die angaben, dass sie sich selbständig weiterbilden, wurden gefragt, werlche Hilfsmittel sie dazu genommen haben:
+
+
+```{r selfhelp_daten}
+e_a <- 
+e %>%
+  pivot_longer(autodidaktwie.YT.:autodidaktwie.other.,
+               values_drop_na = TRUE,
+               values_to = "auto_ja",
+               names_to = "selfhelp") %>%
+  filter(auto_ja != "Nein") %>%
+  filter(auto_ja != "N/A")%>%
+  mutate(selfhelp = na_if(selfhelp, "autodidaktwie.other." ))%>%
+  mutate(selfhelp = coalesce(selfhelp, auto_ja)) %>%
+  mutate(selfhelp = recode(selfhelp,
+                           "BA Studium in Soziologie" = "vorheriges Studium / Ausbildung",
+                           "IT Ausbildung" = "vorheriges Studium / Ausbildung",
+                           "Frühere Erfahrung/Ausbildung" = "vorheriges Studium / Ausbildung",
+                           "vorheriges Studium" = "vorheriges Studium / Ausbildung",
+                           "über die Arbeit" = "Arbeitserfahrung",
+                           "über das Deutsche Archäologische Institut" = "Arbeitserfahrung",
+                           "Fortbildungen durch meinen Chef im Rahmen meines Jobs an der Uni für ein Grabungsprojekt" = "Arbeitserfahrung",
+                           "Arbeit (HiWi)" = "Arbeitserfahrung",
+                           "im früheren Arbeitsbild " = "Arbeitserfahrung",
+                           "Tagung" = "Tagungen",
+                           "Tagungsteilnahmen" = "Tagungen",
+                           "CAA Deutschland Tagung" = "Tagungen",
+                           "Kolloquien mit anderen Studierenden" = "Tagungen",
+                           "Suche nach statistischen Methodiken im Internet" = "autodidaktwie.online.",
+                           "Skripten von Lehrveranstaltungen" = "autodidaktwie.LB.",
+                           "praktisch durch Praxisanteil im Bibliotheksreferendariat an einer Universitätsbibliothek" = "Arbeitserfahrung",
+                           "Learning by doing" = "unspezifisch",
+                           "Google" = "unspezifisch",
+                           "Selbst aktiv Kurse gesucht und besucht." = "unspezifisch",
+                           "Museum Digital" = "autodidaktwie.online."))
+```
+
+```{r selfhelp_abb}
+
+e_a %>%
+  filter(selfhelp != "vorheriges Studium / Ausbildung") %>%
+  filter(selfhelp != "unspezifisch") %>%
+  group_by(selfhelp) %>%
+  summarise(n = n())%>% 
+  ggplot()+
+  geom_col(aes(x = reorder(selfhelp, n), y =  n, fill = selfhelp),
+            show.legend=FALSE)+
+  scale_x_discrete(breaks = c("autodidaktwie.bek." , "autodidaktwie.LB.", "autodidaktwie.online.", "autodidaktwie.YT.", "Arbeitserfahrung", "Tagungen"),
+                 labels = c("Bekannte", "Bücher und Lehrmaterialien", "online Materialien", "YouTube (oder ähnlich)", "auf Arbeit", "auf Konferenzen"))+
+  scale_fill_manual(values = n4o_farben[1:8])+
+  labs(x = "", 
+       y = "Mehrfachnennung",
+       title = "Kanäle für Autodidakten")+
+  geom_text(aes(x = 1, y = 60, label = paste("n =", length(e$autodidakt[e$autodidakt == "Ja"]))))+
+  theme_minimal()+
+  coord_flip()
+  
+```
+
+Gut die Hälfte der Antwortenden bilden sich mithilfe von Bekannten weiter. YouTube und online Materialien werden ebenfalls häufig genutzt, ebenso Lehrbücher und andere Lehrmaterialien. Manche lernten im Arbeitsverhältnis und auf Konferenzen, z. B. Workshops, die im Rahmen von CAA-Tagungen stattfanden.
+
+## Externe Kurse
+
+Werden strukturierte Kurse außerhalb der eigenen Institution wahrgenommen?
+
+```{r extkurs}
+e %>%
+  filter(extkurse != "N/A") %>%
+  ggplot()+
+  geom_bar(aes(x = extkurse), fill = n4o_farben[1])+
+    geom_text(aes(x = 0.5, y = 230, label = paste("N/A =", length(e$extkurse[e$extkurse == "N/A"]))))+
+  theme_minimal()
+```
+
+Nur sehr wenige Studierende und Auszubildenden nehmen an Kursen außerhalb ihrer eigenen Institution wahr. 
+
+```{r n_nextkurs}
+
+e %>%
+  filter(nextkurse > 0) %>%
+  ggplot()+
+  geom_bar(aes(x = nextkurse), fill = n4o_farben[1])+
+  geom_text(aes(x = 4, y = 8, label = paste("n = ", nrow(e %>% filter(nextkurse > 0)))))+
+  labs(x = "Anzahl externer Kurse")+
+  scale_y_continuous(breaks = c(2,4,6,8))+
+  theme_minimal()
+```
+
+### Jahr der externen Fortbildung
+
+```{r jahrext}
+d_ext_j <-
+e %>%
+  pivot_longer(c(jahrextkurs1, jahrextkurs2, jahrextkurs3),
+               values_to = "jahrext",
+               names_to = "kursnummer",
+               values_drop_na = TRUE)
+
+```
+
+```{r jahr_ext_plot}
+d_ext_j %>%
+  ggplot()+
+  geom_histogram(aes(x = jahrext), fill = n4o_farben[1])+
+  theme_minimal()
+```
+
+Dass die Anzahl der Kurse in den Jahren seit 2015 zunimmt, ist sicherlich mit dem Alter der Studierenden und Auszubildenden zu erklären.
+
+Hier sollte untersuch werden, wer an diesen externen Fortbildungen teilnimmt.
+
+```{r}
+d_ext_j %>%
+  group_by(artausbildung)%>%
+  summarise(n = n())%>%
+  ggplot()+
+  geom_col(aes(x = reorder(artausbildung, n), y = n), fill = n4o_farben[1])+
+  labs(x = "",
+       y = "")+
+  scale_y_continuous(breaks = c(seq(0,12,3)))+
+  theme_minimal()+
+  coord_flip()
+```
+
+überraschenderweise sind es nicht in erster Linie Dissertationsstudierende und Menschen im Volontariat, sondern v.a. Masterstudierende, die an externen Kursen teilnehmen. Hier scheint der Bedarf, z.B. für das Datenmanagement der ersten eigenen grlßeren Abschlussarbeit besonders hoch zu sein.
+
+
+### Themen externer Kurse
+```{r}
+
+d_ext <- e %>% 
+  pivot_longer(c(extkursthem1.3D.:extkursthem1.other., extkursthem2.3D.:extkursthem2.other., extkursthem3.3D.:extkursthem3.other.), # fasse diese zusammen
+               names_to = "extkurs_them", # in dieser neuen spalte 
+               names_prefix = "extkursthem", #lösch diesen prefix
+               values_to = "extkursthem_ja", # ja oder nein in diese spalte bzw "other"-Angabe hier rein
+               values_drop_na = TRUE)%>% # lösch alle NA
+  filter(extkursthem_ja != "Nein" & extkursthem_ja != "N/A" & extkursthem_ja != "")%>%
+   mutate(extkurs_them = na_if(extkurs_them, "1.other.")) %>% # in NA umwandlen, wenn da "other" steht
+   mutate(extkurs_them = na_if(extkurs_them, "2.other.")) %>%
+   mutate(extkurs_them = na_if(extkurs_them, "3.other.")) %>%
+   mutate(extkurs_them = coalesce(extkurs_them, extkursthem_ja))# alle NA (ehemals other) mit der Angabe in them_ja füllen
+  
+
+ 
+d_ext$extkurs_them <- gsub('[0-9]+.', '', d_ext$extkurs_them)   
+
+d_ext$extkurs_them <- d_ext$extkurs_them %>%
+  recode( "3D." = "3D-Modellierung, -Scans, -Photogrammetrie",
+          "arch." = "Archivierung",
+          "auszsprache." = "Auszeichnungssprachen",
+          "bildbearb." = "Bildbearbeitung",
+          "cad." = "CAD",
+          "datenb." = "Datenbanken",
+          "datenkur." = "Datenkuration",
+          "datensich." = "Datensicherheit",
+          "datenman." = "Datenmanagement",
+          "diged." = "Digital Editionen",
+          "digdatenausw." = "Digitale Datenanalyse",
+          "digdok." = "Digitale Dokumentation",
+          "digmetheor." = "Digitale Methoden und Theory",
+          "digressour." = "Digitale Ressourcen", 
+          "digverm." = "Digitale Vermessung",
+          "photogramm." = "Photogrammetrie",
+          "programmierung." = "Skriptsprachen und Programmierung",
+          "tools." = "Software und Tools",
+          "spatanal." = "Räumliche Analysen",
+          "stat." = "Statistik",
+          "textanal." = "Textanalyse",
+          "onlineress." = "Online-Ressourcen",
+          "metad." = "Metadaten", 
+          "webtechn." = "Webtechnologien",
+          "gis." = "GIS / Webkartierung",
+          "geophys." = "Geophysik",
+          "urheber." = "Urheber*innenrecht",
+          "other." = "Anderes") 
+```
+
+```{r extkurs_themen}
+
+d_ext %>% 
+  filter(extkurs_them != ".")%>%
+  group_by(extkurs_them)%>%
+  summarize(n = n())%>%
+  ggplot()+
+  geom_col(aes(x = reorder(extkurs_them, n), y = n), fill = n4o_farben[1])+
+  coord_flip()+
+  labs(x = "",
+       y = "Mehrfachnennungen möglich")+
+  geom_text(aes(x = 1, y = 12, label = paste("n =  ", length(!is.na(d_ext_j$jahrext)),"Kurse")))+
+  theme_minimal()
+
+```
+
+Mehrere Themen wurden genannt, zu denen sich die Umfrageteilnehmenden gezielt in Kursen fortbilden. Im Rahmen dieser Umfrage gaben sie v.a. Kurse zu Datenmanagement und Datenbanken an. 
+
+### Veranstaltungsorte
+
+Gibt es bestimmte Zentren, an denen externe Kurse besucht werden? Da die Stichprobe hier sehr gering ist, sollten die Ergebnisse dieser Analyse nicht über-interpretiert werden.
+```{r}
+e  %>% 
+  pivot_longer(c(extkurswo, extkurswo2, extkurswo3),
+               values_to = "extwo",
+               names_to = "extnr",
+               values_drop_na = TRUE)  %>%
+  mutate(extwo = recode(extwo,
+                         "Bochum/Deutschland"  = "Bochum",
+                        "Berlin / Deutschland" = "Berlin",
+                        "Tübingen, Deutschland" = "Tübingen",
+                        "München/Bayern" = "München",
+                        "Berlin/Berlin" = "Berlin",
+                        "Pisa/Italy" = "Pisa/Italien",
+                        "Berlin/Deutschland" = "Berlin",
+                        "Paris / Frankreich" = "Paris/Frankreich",
+                        "Potsdam/Deutschland" = "Potsdam",
+                         "Köln/Deutschland" = "Köln",
+                         "Köln / Deutschland" = "Köln",
+                        "Aarhus / Dänemark" = "Aarhus/Dänemark",
+                        "München Bayern" = "München",
+                        "Mainz / Germany" = "Mainz",
+                        "Heidelberg / Deutschland" = "Heidelberg",
+                        "Hannover / Niedersachsen" = "Hannover"))%>%
+  pivot_longer(c(artextkurs1, artextkurs1.other., artextkurs2, artextkurs2.other., artextkurs3, artextkurs3.other.),
+               names_to = "artextnr",
+               values_to = "art_ext",
+               values_drop_na = TRUE)%>%
+  filter(art_ext != "Sonstiges")%>%
+  mutate(art_ext = recode(art_ext,
+                          "CAA Tagung" = "Workshop während einer Konferenz",
+                          "Konferenz " = "Workshop während einer Konferenz",
+                          "Frühere Arbeitsstelle" = "Fortbildung vom Arbeitgebenden",
+                          "im Rahmen des Bibliotheksreferendariats" = "Fortbildung vom Arbeitgebenden",
+                          "Online Kurs einer Uni in den USA" = "Webinar"))%>%
+  group_by(extwo, art_ext)%>%
+  summarise(count = n())%>%
+  ggplot()+
+  geom_col(aes(x = reorder(extwo, count), y = count, fill = art_ext))+
+  scale_y_continuous(breaks = c(2,4,6,8))+
+  scale_fill_manual(values = n4o_farben[c(1:5,7)],
+                    name = "Art der Fortbildung")+
+  labs (x = "")+
+  coord_flip()+
+  theme_minimal()
+
+```
+
+Insbesondere in Berlin gibt es mehrere Möglichkeiten, an Fortbildungen teilzunehmen. Im Vergleich zu der Anzahl an "internen" Kursen, an denen Studierende und Auszubildende in Berlin teilgenommen haben, ist das überraschend, da dort nicht besonders viele vermerkt wurden. Online und über Auslandsaufenthalte vernetzen sich Studierende und Auszubildende auch international, um an die benötigten Kompetenzen zu kommen. 
+
+
+### Arbeitserfahrung
+
+While the other questions where reserved for structured learning in course, one questioned aimed at whether students and trainees received RDM knowledge "on the job".
+
+```{r}
+
+d%>%
+  filter(jobfortbildung != "N/A") %>%
+ggplot()+
+  geom_bar(aes(x = jobfortbildung), fill = n4o_farben[1])+
+  scale_x_discrete(labels = c("Ja", "Nein"))+
+  theme_minimal()+
+  labs(x = "Haben Sie an Ihrem Arbeitsplatz FDM-Kenntnisse erworben?")
+```
+
+
+
+# Software und Datenformate
+
+```{r}
+e %>%
+  mutate(softwarehaeufig.other. = gsub(";", ",", softwarehaeufig.other.))%>%
+  separate(softwarehaeufig.other., c("A", "B","C","D"), sep = ",")%>%
+  pivot_longer(c(softwarehaeufig.A1.:softwarehaeufig.A13.,A:D),
+               names_to = "software",
+               values_to = "software_ja",
+               values_drop_na = TRUE) %>%
+  filter(software_ja != "Nein" & software_ja != "N/A") %>%
+  mutate(software = na_if(software, "A")) %>%
+  mutate(software = na_if(software, "B")) %>%
+  mutate(software = na_if(software, "C")) %>%
+  mutate(software = na_if(software, "D")) %>%
+  mutate(software = coalesce(software, software_ja))%>%
+  filter(software != " ") %>%
+  mutate(software = recode(software,
+                         "softwarehaeufig.A1."  = "Excel",
+                         "softwarehaeufig.A2."  = "QGIS",
+                         "softwarehaeufig.A3."  ="Microsoft Access",
+                         "softwarehaeufig.A4."  = "SPSS",
+                         "softwarehaeufig.A5." = "Word",
+                         "softwarehaeufig.A6." = "LibreOffice",
+                         "softwarehaeufig.A7." = "LibreCalc",
+                         "softwarehaeufig.A8."  = "ArcGIS",
+                         "softwarehaeufig.A9."  = "AdobeAcrobat Reader",
+                         "softwarehaeufig.A10."  = "MeshLab",
+                         "softwarehaeufig.A11." = "WinBASP",
+                         "softwarehaeufig.A12." = "Adobe InDesign",
+                         "softwarehaeufig.A13." = "Adobe Photoshop",
+                         "Rstudio" = "R, Rstudio",
+                         "RStudio" = "R, Rstudio",
+                         "R" = "R, Rstudio",
+                         " R" = "R, Rstudio",
+                         "Latex" = "LaTeX",
+                         " LaTex" = "LaTeX",
+                         " Inkscape" = "Inkscape",
+                          "Power Point"= "Powerpoint",
+                          " Power Point"= "Powerpoint",
+                         " powerpoint" = "Powerpoint",
+                         " PowerPoint" = "Powerpoint",
+                         " Power Point" = "Powerpoint",
+                         "autocad" = "AutoCAD",
+                         "Autocad" = "AutoCAD",
+                         "AUTOCad" = "AutoCAD",
+                         "archicad" = "ArchiCAD",
+                         "openoffice" = "OpenOffice",
+                         "Matlab" = "MatLab",
+                         "Gimp" = "GIMP"))%>%
+  group_by(software)%>%
+  summarise(Count = n())%>%
+  filter(Count > 2)%>%
+ggplot()+
+  geom_col(aes(x = reorder(software, Count), y = Count), fill = n4o_farben[1])+
+  labs(x = "",
+       y = "Häufigkeit (> 2)")+
+  theme_minimal()+
+  coord_flip()
+```
+
+
+```{r}
+d_d <- e %>%
+  pivot_longer(dateiformatproduzien.A1.:dateiformatproduzien.A15.,
+               names_to = "dateiformat",
+               values_to = "dateiformat_ja",
+               values_drop_na = TRUE) %>%
+  filter(dateiformat_ja == "Ja") %>%
+  mutate(dateiformat = recode(dateiformat,
+                           "dateiformatproduzien.A1." = "xls/xlsx",
+                           "dateiformatproduzien.A2." = "doc/docx",
+                           "dateiformatproduzien.A3." = "pdf", 
+                           "dateiformatproduzien.A4." = "ppt/pptx",
+                           "dateiformatproduzien.A5." = "ods",
+                           "dateiformatproduzien.A6." = "csv",
+                           "dateiformatproduzien.A7." = "odt",
+                           "dateiformatproduzien.A8."= "png",
+                           "dateiformatproduzien.A9." = "jpg",
+                           "dateiformatproduzien.A10." = "tiff",
+                           "dateiformatproduzien.A11." = "geotiff",
+                           "dateiformatproduzien.A12." = "geojson",
+                           "dateiformatproduzien.A13." =  "shp",
+                           "dateiformatproduzien.A14." = "json",
+                           "dateiformatproduzien.A15." = "xml"))%>%
+  group_by(dateiformat)%>%
+  summarise(Count = n())%>%
+  filter(Count > 2)
+
+
+
+library("tm")
+library("SnowballC")
+
+d$dateiformatproduzien.other. <- gsub("/", " , ", d$dateiformatproduzien.other.)
+docs <- Corpus(VectorSource(d$dateiformatproduzien.other.))
+
+#inspect(docs)
+
+# alles kleinschreiben
+docs <- tm_map(docs, content_transformer(tolower))
+# Remove punctuations
+docs <- tm_map(docs, removePunctuation)
+# Eliminate extra white spaces
+#docs <- tm_map(docs, stripWhitespace)
+
+
+dtm <- TermDocumentMatrix(docs)
+m <- as.matrix(dtm)
+v <- sort(rowSums(m),decreasing=TRUE)
+d_docs <- data.frame(dateiformat = names(v),Count=v)%>%
+  filter(Count > 2) 
+
+dd <-  data.frame(d_d$dateiformat, d_d$Count)
+colnames(dd)  <- c("dateiformat", "Count")
+d_d2 <- rbind(d_docs, dd)
+
+ggplot(data = d_d2)+
+  geom_col(aes(x = reorder(dateiformat, Count), y = Count), fill = n4o_farben[1])+
+  labs(x = "Dateiformat",
+       y = "Anzahle (> 2)")+
+  theme_minimal()+
+  coord_flip()
+
+  #  pyrhtml??
+  
+``` 
+
+Die Ergebnisse dieser Umfrage sind hier vergleichbar mit denen der ersten NFDI4Objects-Umfrage. Die Abfrage, welche Datenformate weniger bekannt sind, bestätigte das hier vorgestellte Ergebnis. Insbesondere geoinformatische Formate wie geojson, geotiff und shape sind relativ unbekannt.
+
+
+
+## Sind Richtlinen bekannt?
+
+todo: here ist ein fehler drin
+
+Den meisten Antwortenden (`r sum(d$richtliniendateien == "Nein") `) sind keine Datenmanagement-Richtlinien bekannt. Einige (`r sum(d$richtliniendateien == "Ja") `) konnten welche nennen:
+
+```{r richtlinien_vorb, eval = FALSE }
+
+rl <- data.frame(e$richtliniendateien1, NA)
+
+rl <- rl[!is.na(rl)]
+
+write.csv2(rl, "../data/derived_data/richtlinien.csv", sep = ";", fileEncoding = "UTF")
+
+```
+
+```{r richtlinien}
+
+rl <- read.csv("../data/derived_data/richtlinien.csv", sep = ",", encoding = "UTF-8")
+
+
+
+```
+
+`r sum(rl$FAIR, na.rm = TRUE)` Leute nenne die FAIR-Prinzipien.
+
+`r sum(rl$IANUS, na.rm = TRUE)` Leute nenne die IANUS-IT-Empfehlungen.
+
+`r sum(rl$drei_zwei_eins, na.rm = TRUE)` Leute nenne die 3-2-1-Back-Up-Strategien.
+
+Weitere spezifische Richtlinen die genannt werden:
+
+```{r}
+rl%>%
+  filter(spezifisch != "") %>%
+ggplot()+
+  geom_bar(aes(x = spezifisch, na.rm= TRUE), fill = n4o_farben[1])+
+  labs(x = "Richtlinie",
+       y = "Anzahl")+
+  theme_minimal()+
+  coord_flip()
+```
+
+
+# Bedarfe nach Fortbildungen
+
+`r sum(d$fortbildung == "Nein", na.rm=TRUE)` hatten keine Wünsche nach bestimmten Fortbildungen. `r sum(d$fortbildung == "Ja", na.rm=TRUE)` der Antwortenden äußerten Bedarfe:
+
+```{r bedaf_daten}
+
+d_fb <- e %>% 
+  pivot_longer(c(fortbildung1.3D.:fortbildung1.other.), # fasse diese zusammen
+               names_to = "fortbildung_them", # in dieser neuen spalte 
+               names_prefix = "fortbildung1.", #lösch diesen prefix
+               values_to = "fortbildung_ja", # ja oder nein in diese spalte
+               values_drop_na = TRUE)%>% # lösch alle NA
+  filter(fortbildung_ja == "Ja")%>%
+  mutate(fortbildung_them = recode(fortbildung_them ,
+          "3D." = "3D-modelling / 3D-scans / 3D-photogrammetrie",
+          "arch." = "Archiving",
+          "3D1." = "Markup language",  # ja, ab hier sind die codes anders als in den anderen Themenbeschreibungen.            
+          "3D2." = "Image manipulation",
+          "3D3." = "CAD",
+          "3D4." = "Data curation",
+          "3D5." = "Data bases",
+          "3D6." = "Data security",
+          "3D7." = "Data management",
+          "3D8." = "Digital editions",
+          "3D9." = "Digital data analysis",
+          "3D10." = "Digital documentation",
+          "3D11." = "Digital method and theory",
+          "3D12." = "Digitale ressources (e.g. ZENON, Arachne, ...)", 
+          "3D13." = "Digital survey",
+          "3D14." = "Photogrammetrie",
+          "3D15." = "Scripting languages (R, Python)",
+          "3D27." = "programming languages (JAVA, C++)", 
+          "3D16." = "Software and tools",
+          "3D17." = "Spatial analysis",
+          "3D18." = "Statistics",
+          "3D19." = "Text analysis",
+          "3D20." = "Programming, Software Engineering",
+          "3D21." = "Online ressources", 
+          "3D22." = "Metadata",
+          "3D23." = "Web technologies",
+          "3D24." = "GIS / Web GIS",
+          "3D25." = "Geophysics",
+          "3D26." = "Copy right"))
+
+```
+
+```{r bedarfe_plot}
+d_fb %>%
+  group_by(fortbildung_them, artausbildung)%>%
+  summarise(Count = n())%>%
+  ggplot()+
+  geom_col(aes(x = reorder(fortbildung_them, Count), y = Count, fill = artausbildung))+
+  labs(x = "gewünschte Themen", 
+       y = "Mehrfachnennung möglich")+
+  scale_fill_manual(values = n4o_farben[1:5],
+                    name = "Art der Ausbildung")+
+  coord_flip()+
+  theme_minimal()
+```
+
+
+sonstiges: 
+"Ich würde gern mehr kennen, habe aber keine Zeit, mich einzuarbeiten"
+[31] "Machine Learning"                                                    
+[32] "Past"                                                                
+[33] "Videobearbeitung"                                                    
+[34] "Vielleicht ein wenig von allem " 
+
+\newpage
+
+# References 
+
+<!-- The following line ensures the references appear here for the MS Word or HTML output files, rather than right at the end of the document (this will not work for PDF files):  -->
+
+<div id="refs"></div>
+
+\newpage
+
+### Colophon
+
+This report was generated on `r Sys.time()` using the following computational environment and dependencies: 
+
+```{r colophon, cache = FALSE}
+# which R packages and versions?
+if ("devtools" %in% installed.packages()) devtools::session_info()
+```
+
+The current Git commit details are:
+
+```{r}
+# what commit is this file at? 
+if ("git2r" %in% installed.packages() & git2r::in_repository(path = ".")) git2r::repository(here::here())  
+```
